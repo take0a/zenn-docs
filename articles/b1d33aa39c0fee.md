@@ -2,8 +2,8 @@
 title: "クラウドネイティブとは何か"
 emoji: "☁"
 type: "tech" # tech: 技術記事 / idea: アイデア
-topics: ["cloud", "native", "architecture", "クラウドネイティブ", "FaaS"]
-published: false
+topics: ["cloud", "native", "architecture", "クラウドネイティブ", "faas"]
+published: true
 publication_name: "robon"
 ---
 # はじめに
