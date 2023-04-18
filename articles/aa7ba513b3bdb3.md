@@ -143,5 +143,5 @@ INFO:     Application startup complete.
 
 データベースにアクセスするREST Serverを実装していきます。
 
-<!-- https://zenn.dev/robon/articles/bb17fd07739519 -->
+https://zenn.dev/robon/articles/bb17fd07739519
 
