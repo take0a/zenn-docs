@@ -1,0 +1,3122 @@
+---
+title: "OpenAPI仕様 Version 3.1.0"
+emoji: "🙌"
+type: "tech" # tech: 技術記事 / idea: アイデア
+topics: ["openapi"]
+published: false
+---
+
+# OpenAPI 仕様
+## Version 3.1.0
+このドキュメント内のキーワード "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", および "OPTIONAL" は、ここで示したように全て大文字で表記される場合、また、その場合のみ [BCP 14](https://tools.ietf.org/html/bcp14) [RFC2119](https://tools.ietf.org/html/rfc2119) [RFC8174](https://tools.ietf.org/html/rfc8174) で説明されているように解釈されます。
+
+このドキュメントは、[The Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0.html)の下でライセンスされます。
+
+# はじめに
+OpenAPI 仕様 (OAS) は、言語に依存しない標準の HTTP API へのインターフェイスを定義します。これにより、人間とコンピューターの両方が、ソースコードやドキュメントにアクセスしたり、ネットワークトラフィックを調べたりすることなく、サービスの機能を発見して理解できるようになります。 適切に定義されていれば、利用者は最小限の実装ロジックでリモートサービスを理解し、対話することができます。
+
+OpenAPI 定義は、API を表示するためのドキュメント生成ツール、さまざまなプログラミング言語でサーバーとクライアントを生成するためのコード生成ツール、テストツール、およびその他の多くのユースケースで使用できます。
+
+# 定義
+## OpenAPIドキュメント
+API または API の要素を定義または記述する自己完結型または複合リソース。 OpenAPI ドキュメントには、少なくとも 1 つの [paths](#pathsオブジェクト) フィールド、componentsフィールド、または webhooksフィールドが含まれている必要があります。 OpenAPIドキュメントは、OpenAPI 仕様を使用し、準拠しています。
+
+## パステンプレート
+パステンプレートとは、パスパラメーターを使用して URL パスのセクションを置換可能としてマークするために、中かっこ ({}) で区切られたテンプレート式を使うことです。
+
+パス内の各テンプレート式は、[Path Item](#path-itemオブジェクト) 自体および/またはパスアイテムの [Operations](#operation-オブジェクト) のそれぞれに含まれるパスパラメーターに対応する必要があります（MUST）。 例外として、ACL の制約などによりパスアイテムが空の場合、一致するパスパラメータは必要ありません。
+
+これらのパスパラメータの値には、[RFC3986](https://tools.ietf.org/html/rfc3986#section-3) で説明されているエスケープされていない「一般的な構文」文字: スラッシュ(`/`)、クエスチョンマーク(`?`) またはハッシュ(`#`)を含めてはなりません（MUST NOT）。
+
+## メディアタイプ
+メディアタイプの定義は、複数のリソースに分散しています。
+メディアタイプの定義は、[RFC6838](https://tools.ietf.org/html/rfc6838) に準拠する必要があります。
+
+考えられるメディアタイプの定義の例:
+```
+  text/plain; charset=utf-8
+  application/json
+  application/vnd.github+json
+  application/vnd.github.v3+json
+  application/vnd.github.v3.raw+json
+  application/vnd.github.v3.text+json
+  application/vnd.github.v3.html+json
+  application/vnd.github.v3.full+json
+  application/vnd.github.v3.diff
+  application/vnd.github.v3.patch
+```
+
+## HTTPステータスコード
+HTTP ステータス コードは、実行された操作のステータスを示すために使用されます。
+利用可能なステータス コードは [RFC7231](https://tools.ietf.org/html/rfc7231#section-6) で定義されており、登録されているステータス コードは [IANA Status Code Registry](https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml) にリストされています。
+
+# 仕様
+## バージョン
+OpenAPI 仕様は、`メジャー`.`マイナー`.`パッチ` のバージョン管理スキームを使用してバージョン管理されています。 バージョン文字列の`メジャー`.`マイナー`部分 (たとえば、`3.1`) は、OAS 機能セットを指定する必要があります（SHALL）。 *`.パッチ`* バージョンは、機能セットではなく、このドキュメントのエラーに対処したり、説明を提供したりします。 OAS 3.1 をサポートするツールは、すべての OAS 3.1.\* バージョンと互換性がある必要があります（SHOULD）。 たとえば、`3.1.0` と `3.1.1` を区別しないように、パッチバージョンはツールで考慮されるべきではありません（SHOULD NOT）。
+
+提供される利点に比べて影響が小さいと考えられる OAS の`マイナー`バージョンで、下位互換性のない変更が行われる場合があります。
+
+OAS 3.\*.\* と互換性のある OpenAPI ドキュメントには、使用する OAS のバージョンを指定する必須の `openapi`フィールドが含まれています。
+
+## 形式
+OpenAPI 仕様に準拠する OpenAPI ドキュメントは、それ自体が JSON オブジェクトであり、JSON または YAML 形式で表すことができます。
+
+たとえば、フィールドに配列値がある場合、JSON 配列表現が使用されます。
+```json
+{
+   "field": [ 1, 2, 3 ]
+}
+```
+仕様内のすべてのフィールド名は、**大文字と小文字が区別されます**。
+これには、マップでキーとして使用されるすべてのフィールドが含まれます。ただし、キーは **大文字と小文字を区別しない**と明記されている場合を除きます。
+
+スキーマは、宣言された名前を持つ固定フィールドと、フィールド名に対する正規表現パターンで宣言されたパターン表記されたフィールドの 2 種類のフィールドを公開します。
+
+パターン表記されたフィールドは、それを含むオブジェクト内で一意の名前を持つ必要があります（MUST）。
+
+YAML と JSON フォーマット間のラウンドトリップ機能を保持するために、YAML バージョン [1.2](https://yaml.org/spec/1.2/spec.html) がいくつかの追加の制約とともに推奨されます（RECOMMENDED）。
+
+- タグは、[JSONスキーマルールセット](https://yaml.org/spec/1.2/spec.html#id2803231) で許可されているものに限定する必要があります（MUST）。
+- YAML マップで使用されるキーは、[YAML フェイルセーフ スキーマ ルールセット](https://yaml.org/spec/1.2/spec.html#id2802346) で定義されているように、スカラー文字列に制限する必要があります（MUST）。
+
+**注:** API は OpenAPI ドキュメントによって YAML または JSON 形式で定義できますが、API の要求と応答の本文、およびその他のコンテンツは JSON または YAML である必要はありません。
+
+## ドキュメントの構造
+OpenAPI ドキュメントは、作成者の裁量で、単一のドキュメントで構成されている場合もあれば、複数の接続された部分に分割されている場合もあります。 後者の場合、[`Referenceオブジェクト`](#referenceオブジェクト) および [`Schemaオブジェクト`](#schemaオブジェクト) に `$ref` キーワードが使用されます。
+
+ルートOpenAPIドキュメントの名前を「openapi.json」または「openapi.yaml」にすることをお勧めします（RECOMMENDED）。
+
+## データ型
+OAS のデータ型は、[JSON Schema Specification Draft 2020-12](https://tools.ietf.org/html/draft-bhutton-json-schema-00#section-4.2.1) でサポートされている型に基づいています。 ）。
+型として`integer`もサポートされており、小数部または指数部のない JSON 数値として定義されていることに注意してください。
+モデルは、JSON Schema Specification Draft 2020-12 のスーパーセットである [Schema Object](#schemaObject) を使用して定義されます。
+
+[JSONスキーマ検証語彙](https://tools.ietf.org/html/draft-bhutton-json-schema-validation-00#section-7.3 )、データ型にはオプションの修飾子プロパティ`format`を指定できます。
+OAS は、プリミティブ データ型の詳細を提供する追加の形式を定義します。
+
+OAS で定義されている形式は次のとおりです。
+
+`type` | `format` | コメント
+------ | -------- | --------
+`integer` | `int32` | signed 32 bits
+`integer` | `int64` | signed 64 bits (a.k.a long)
+`number` | `float` | |
+`number` | `double` | |
+`string` | `password` | 入力をわかりにくくするための UI へのヒント。
+
+## リッチテキスト形式
+仕様全体を通して、「説明」フィールドは、CommonMark マークダウン形式をサポートするものとして示されています。
+OpenAPIツールがリッチ テキストをレンダリングする場合、[CommonMark 0.27](https://spec.commonmark.org/0.27/) で説明されているように、少なくともマークダウン構文をサポートする必要があります。 ツールは、セキュリティ上の懸念に対処するために、一部の CommonMark 機能を無視することを選択しても構いません（MAY）。
+
+## URIの相対参照
+特に指定されていない限り、URI であるすべてのプロパティは、[RFC3986](https://tools.ietf.org/html/rfc3986#section-4.2) で定義されている相対参照である場合があります。
+
+[`Referenceオブジェクト`](#referenceオブジェクト)、[`Path Itemオブジェクト`](#path-itemオブジェクト) `$ref` フィールド、[`Linkオブジェクト`](#linkオブジェクト) `operationRef`フィールド、および [`Exampleオブジェクト`](#exampleオブジェクト) `externalValue`フィールドに含まれる相対参照は、[RFC3986](https://tools.ietf.org/html/rfc3986#section-5.2) に従って参照ドキュメントをベースURIとして使用して解決されます。
+
+URI にフラグメント識別子が含まれている場合、フラグメントは、参照されているドキュメントのフラグメント解決メカニズムに従って解決する必要があります。 参照されるドキュメントの表現が JSON または YAML の場合、[RFC6901](https://tools.ietf.org/html/rfc6901) に従って、フラグメント識別子を JSON-Pointer として解釈する必要があります（SHOULD）。
+
+[`Schemaオブジェクト`](#schemaオブジェクト) の相対参照 (`$id` 値として表示されるものを含む) は、[JSON Schema Specification Draft 2020-12](https://tools.ietf.org/html/draft-bhutton-json-schema-00#section-8.2) で説明されているように、最も近い親 `$id` をベース URI として使用します。 。 親スキーマに`$id`が含まれていない場合、[RFC3986](https://tools.ietf.org/html/rfc3986#section-5.1) に従ってベース URI を決定する必要があります（MUST）。
+
+## URLの相対参照
+特に指定しない限り、[RFC3986](https://tools.ietf.org/html/rfc3986#section-4.2) で定義されているように、URL であるすべてのプロパティは相対参照である場合があります。
+特に指定しない限り、相対参照は [`Serverオブジェクト`](#serverオブジェクト) で定義された URL をベース URL として使用して解決されます。 これら自体は、参照ドキュメントに関連している場合がある（MAY）ことに注意してください。
+
+## スキーマ
+以下の説明では、フィールドが明示的に **REQUIRED** でないか、MUST または SHALL と記述されていない場合、OPTIONAL と見なすことができます。
+
+### OpenAPIオブジェクト
+これは、[OpenAPIドキュメント](#openapiドキュメント)のルートオブジェクトです。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+openapi | `string` | **REQUIRED**. この文字列は、OpenAPI ドキュメントが使用する OpenAPI 仕様の[バージョン](#バージョン)でなければなりません。`openapi`フィールドは、ツールが OpenAPI ドキュメントを解釈するために使用できる必要があります（SHOULD）。 これは、API の `info.version` 文字列とは関係ありません。
+info | [Info](#infoオブジェクト) | **REQUIRED**. API に関するメタデータを提供します。 メタデータは、必要に応じてツールが使用する場合があります。
+jsonSchemaDialect | `string` | この OAS ドキュメントに含まれる [Schemaオブジェクト](#schemaオブジェクト) 内の `$schema` キーワードのデフォルト値。 これは URI の形式でなければなりません（MUST）。
+servers | [[Server](#serverオブジェクト)] | ターゲットサーバーに接続する情報を提供するサーバーオブジェクトの配列。 `servers` プロパティが指定されていない場合、または空の配列である場合、デフォルト値は url 値が `/` の [Serverオブジェクト](#serverオブジェクト) になります。
+paths | [Paths](#pathsオブジェクト) | API で使用可能なパスと操作。
+webhooks | Map[`string`, [Path Item](#path-itemオブジェクト) \| [Reference](#referenceオブジェクト)] ] | この API の一部として受信される可能性があり（MAY）、API コンシューマーが実装することを選択する可能性がある（MAY）受信用の Webhook。 `コールバック`機能に密接に関連するこのセクションでは、API 呼び出し以外の、例えば、帯域外登録などによって開始されたリクエストについて説明します。 キー名は、各 Webhook を参照するための一意の文字列であり、(オプションで参照される) Path Item オブジェクトは、API プロバイダーによって開始される可能性がある要求と、予想される応答を記述します。 [例](https://github.com/OAI/OpenAPI-Specification/blob/main/examples/v3.1/webhook-example.yaml) が参照可能です。
+components | [Components](#componentsオブジェクト) | ドキュメントのさまざまなスキーマを保持する要素。
+security | [[Security Requirement](#security-requirementオブジェクト)] | API 全体で使用できるセキュリティメカニズムの宣言。 値のリストには、使用できる代替のセキュリティ要件オブジェクトが含まれています。 要求を承認するには、セキュリティ要件オブジェクトの 1 つだけを満たす必要があります。 個々の操作は、この定義をオーバーライドできます。 セキュリティをオプションにするために、空のセキュリティ要件 (`{}`) を配列に含めることができます。
+tags | [[Tag](#tagオブジェクト)] | 追加のメタデータを含むドキュメントで使用されるタグのリスト。 タグの順序は、解析ツールによる順序を反映するために使用できます。 [Operation](#operationオブジェクト) で使用されるすべてのタグを宣言する必要はありません。 宣言されていないタグは、ランダムに、またはツールのロジックに基づいて編成される場合があります（MAY）。リスト内の各タグ名は一意でなければなりません（MUST）。
+externalDocs | [External Documentation](#external-documentationオブジェクト) | 追加の外部ドキュメント。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+### Infoオブジェクト
+このオブジェクトは、API に関するメタデータを提供します。
+メタデータは、必要に応じてクライアントによって使用される場合があり（MAY）、便宜上、編集ツールまたはドキュメント生成ツールで提示される場合があります（MAY）。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+title | `string` | **REQUIRED**. API のタイトル。
+summary | `string` | API の簡単な要約。
+description | `string` | API の説明。[CommonMark構文](https://spec.commonmark.org/) が、リッチ テキスト表現に使用される場合があります（MAY）。 
+termsOfService | `string` | API の利用規約への URL。 これは URL の形式でなければなりません（MUST）。
+contact | [Contact](#contactオブジェクト) | 公開された API の連絡先情報。
+license | [License](#licenseオブジェクト) | 公開された API のライセンス情報。
+version | `string` | **REQUIRED**. この OpenAPI ドキュメントのバージョン (OpenAPI 仕様のバージョンまたは API 実装バージョンとは異なります)。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Infoオブジェクトの例
+```json
+{
+  "title": "Sample Pet Store App",
+  "summary": "A pet store manager.",
+  "description": "This is a sample server for a pet store.",
+  "termsOfService": "https://example.com/terms/",
+  "contact": {
+    "name": "API Support",
+    "url": "https://www.example.com/support",
+    "email": "support@example.com"
+  },
+  "license": {
+    "name": "Apache 2.0",
+    "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+  },
+  "version": "1.0.1"
+}
+```
+```yaml
+title: Sample Pet Store App
+summary: A pet store manager.
+description: This is a sample server for a pet store.
+termsOfService: https://example.com/terms/
+contact:
+  name: API Support
+  url: https://www.example.com/support
+  email: support@example.com
+license:
+  name: Apache 2.0
+  url: https://www.apache.org/licenses/LICENSE-2.0.html
+version: 1.0.1
+```
+
+### Contactオブジェクト
+公開された API の連絡先情報。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+name | `string` | 連絡担当者/組織の識別名。
+url | `string` | 連絡先情報を指す URL。 これは URL の形式でなければなりません（MUST）。
+email | `string` | 連絡担当者/組織の電子メール アドレス。 これは電子メールアドレスの形式でなければなりません（MUST）。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Contactオブジェクトの例
+```json
+{
+  "name": "API Support",
+  "url": "https://www.example.com/support",
+  "email": "support@example.com"
+}
+```
+```yaml
+name: API Support
+url: https://www.example.com/support
+email: support@example.com
+```
+
+### Licenseオブジェクト
+公開された API のライセンス情報。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+name | `string` | **REQUIRED**. API に使用されるライセンス名。
+identifier | `string` | API の [SPDX](https://spdx.org/spdx-specification-21-web-version#h.jxpfx0ykyb60) ライセンス表現。 `identifier` フィールドか `url` フィールドのどちらか一方を指定できます。
+url | `string` | API に使用されるライセンスへの URL。 これは URL の形式でなければなりません（MUST）。 `url` フィールドか `identifier` フィールドのどちらか一方を指定できます。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Licenseオブジェクトの例
+```json
+{
+  "name": "Apache 2.0",
+  "identifier": "Apache-2.0"
+}
+```
+```yaml
+name: Apache 2.0
+identifier: Apache-2.0
+```
+
+### Serverオブジェクト
+サーバーを表すオブジェクト。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+url | `string` | **REQUIRED**. ターゲット ホストへの URL。 この URL はサーバー変数をサポートしており、ホストの場所が OpenAPI ドキュメントが提供されている場所に対して相対的であることを示すために、相対的である可能性があります。 変数が `{`中括弧`}` で指定されている場合、変数の置換が行われます。
+description | `string` | URL で指定されたホストを説明するオプションの文字列。 [CommonMark構文](https://spec.commonmark.org/) が、リッチ テキスト表現に使用される場合があります（MAY）。
+variables | Map[`string`, [Server Variable](#server-variableオブジェクト)] | 変数名とその値の間のマップ。 この値は、サーバーの URL テンプレートで置換に使用されます。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Server オブジェクトの例
+単一のサーバーは次のように記述されます。
+```json
+{
+  "url": "https://development.gigantic-server.com/v1",
+  "description": "Development server"
+}
+```
+```yaml
+url: https://development.gigantic-server.com/v1
+description: Development server
+```
+以下は、例として、 OpenAPI オブジェクトの`servers`で複数のサーバーを記述する方法を示しています。
+```json
+{
+  "servers": [
+    {
+      "url": "https://development.gigantic-server.com/v1",
+      "description": "Development server"
+    },
+    {
+      "url": "https://staging.gigantic-server.com/v1",
+      "description": "Staging server"
+    },
+    {
+      "url": "https://api.gigantic-server.com/v1",
+      "description": "Production server"
+    }
+  ]
+}
+```
+```yaml
+servers:
+- url: https://development.gigantic-server.com/v1
+  description: Development server
+- url: https://staging.gigantic-server.com/v1
+  description: Staging server
+- url: https://api.gigantic-server.com/v1
+  description: Production server
+```
+以下は、サーバー構成で変数を使用する方法を示しています。
+```json
+{
+  "servers": [
+    {
+      "url": "https://{username}.gigantic-server.com:{port}/{basePath}",
+      "description": "The production API server",
+      "variables": {
+        "username": {
+          "default": "demo",
+          "description": "this value is assigned by the service provider, in this example `gigantic-server.com`"
+        },
+        "port": {
+          "enum": [
+            "8443",
+            "443"
+          ],
+          "default": "8443"
+        },
+        "basePath": {
+          "default": "v2"
+        }
+      }
+    }
+  ]
+}
+```
+```yaml
+servers:
+- url: https://{username}.gigantic-server.com:{port}/{basePath}
+  description: The production API server
+  variables:
+    username:
+      # note! no enum here means it is an open value
+      default: demo
+      description: this value is assigned by the service provider, in this example `gigantic-server.com`
+    port:
+      enum:
+        - '8443'
+        - '443'
+      default: '8443'
+    basePath:
+      # open meaning there is the opportunity to use special base paths as assigned by the provider, default is `v2`
+      default: v2
+```
+
+### Server Variableオブジェクト
+サーバー URL テンプレートで置換用のサーバー変数を表すオブジェクト。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+enum | [`string`] | 置換オプションが限られたセットからのものである場合に使用される文字列値の列挙。 配列は空であってはなりません（MUST NOT）。
+default | `string` |  **REQUIRED**. 置換に使用するデフォルト値。代替値が指定されていない場合に送信する必要があります（SHALL）。 この動作は、[Schemaオブジェクト](#schemaオブジェクト) のデフォルト値の処理とは異なることに注意してください。これらの場合、パラメータ値はオプションであるためです。 `enum` が定義されている場合、値は列挙型の値に存在する必要があります（MUST）。
+description | `string` | サーバー変数のオプションの説明。 [CommonMark構文](https://spec.commonmark.org/) が、リッチ テキスト表現に使用される場合があります（MAY）。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+### Componentsオブジェクト
+OAS のさまざまな側面について再利用可能なオブジェクトのセットを保持します。
+コンポーネントオブジェクト内で定義されたすべてのオブジェクトは、コンポーネントオブジェクトの外部のプロパティから明示的に参照されない限り、API に影響を与えません。
+
+#### 固定フィールド
+Field Name | Type | Description
+---|:---|---
+schemas | Map[`string`, [Schema](#schemaオブジェクト)] | 再利用可能な [Schemaオブジェクト](#schemaオブジェクト) を保持するオブジェクト。
+responses | Map[`string`, [Response](#responseオブジェクト) \| [Reference](#referenceオブジェクト)] | 再利用可能な [Responseオブジェクト](#responsesオブジェクト) を保持するオブジェクト。
+parameters | Map[`string`, [Parameter](#parameterオブジェクト) \| [Reference](#referenceオブジェクト)] | 再利用可能な [Parameterオブジェクト](#parameterオブジェクト) を保持するオブジェクト。
+examples | Map[`string`, [Example](#exampleオブジェクト) \| [Reference](#referenceオブジェクト)] | 再利用可能な [Exampleオブジェクト](#exampleオブジェクト) を保持するオブジェクト。
+requestBodies | Map[`string`, [Request Body](#request-bodyオブジェクト) \| [Reference](#referenceオブジェクト)] | 再利用可能な [Request Body オブジェクト](#requestBodyObject) を保持するオブジェクト。
+headers | Map[`string`, [Header](#headerオブジェクト) \| [Reference](#referenceオブジェクト)] | 再利用可能な [Headerオブジェクト](#headerオブジェクト) を保持するオブジェクト。
+securitySchemes| Map[`string`, [Security Scheme](#security-schemeオブジェクト) \| [Reference](#referenceオブジェクト)] | 再利用可能な [Security Schemeオブジェクト](#security-schemeオブジェクト) を保持するオブジェクト。
+links | Map[`string`, [Link](#linkオブジェクト) \| [Reference](#referenceオブジェクト)] | 再利用可能な [Link オブジェクト](#linkオブジェクト) を保持するオブジェクト。
+callbacks | Map[`string`, [Callback](#callbackオブジェクト) \| [Reference](#referenceオブジェクト)] | 再利用可能な [Callbackオブジェクト](#callbackオブジェクト) を保持するオブジェクト。
+pathItems | Map[`string`, [Path Item](#path-itemオブジェクト) \| [Reference](#referenceオブジェクト)] | 再利用可能な [Path Itemオブジェクト](#path-itemオブジェクト) を保持するオブジェクト。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+上記で宣言されたすべての固定フィールドは、正規表現 `^[a-zA-Z0-9\.\-_]+$` に一致するキーを使用する必要があるオブジェクトです。
+
+フィールド名の例:
+```
+User
+User_1
+User_Name
+user-name
+my.org.User
+```
+
+#### Componentsオブジェクトの例
+```json
+"components": {
+  "schemas": {
+    "GeneralError": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "Category": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "Tag": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "parameters": {
+    "skipParam": {
+      "name": "skip",
+      "in": "query",
+      "description": "number of items to skip",
+      "required": true,
+      "schema": {
+        "type": "integer",
+        "format": "int32"
+      }
+    },
+    "limitParam": {
+      "name": "limit",
+      "in": "query",
+      "description": "max records to return",
+      "required": true,
+      "schema" : {
+        "type": "integer",
+        "format": "int32"
+      }
+    }
+  },
+  "responses": {
+    "NotFound": {
+      "description": "Entity not found."
+    },
+    "IllegalInput": {
+      "description": "Illegal input for operation."
+    },
+    "GeneralError": {
+      "description": "General Error",
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/GeneralError"
+          }
+        }
+      }
+    }
+  },
+  "securitySchemes": {
+    "api_key": {
+      "type": "apiKey",
+      "name": "api_key",
+      "in": "header"
+    },
+    "petstore_auth": {
+      "type": "oauth2",
+      "flows": {
+        "implicit": {
+          "authorizationUrl": "https://example.org/api/oauth/dialog",
+          "scopes": {
+            "write:pets": "modify pets in your account",
+            "read:pets": "read your pets"
+          }
+        }
+      }
+    }
+  }
+}
+```
+```yaml
+components:
+  schemas:
+    GeneralError:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    Tag:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+  parameters:
+    skipParam:
+      name: skip
+      in: query
+      description: number of items to skip
+      required: true
+      schema:
+        type: integer
+        format: int32
+    limitParam:
+      name: limit
+      in: query
+      description: max records to return
+      required: true
+      schema:
+        type: integer
+        format: int32
+  responses:
+    NotFound:
+      description: Entity not found.
+    IllegalInput:
+      description: Illegal input for operation.
+    GeneralError:
+      description: General Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GeneralError'
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header
+    petstore_auth:
+      type: oauth2
+      flows: 
+        implicit:
+          authorizationUrl: https://example.org/api/oauth/dialog
+          scopes:
+            write:pets: modify pets in your account
+            read:pets: read your pets
+```
+
+### Pathsオブジェクト
+個々のエンドポイントとその操作の相対パスを保持します。
+完全な URL を作成するために、[`Serverオブジェクト`](#serverオブジェクト) から URL にパスが追加されます。 [アクセス制御リスト(ACL)の制約](#セキュリティフィルタリング) により、パスが空になる場合があります（MAY）。
+
+#### パラメータ化されたフィールド
+フィールドのパターン | 型 | 説明
+---|:---:|---
+/{path} | [Path Item](#path-itemオブジェクト) | 個々のエンドポイントへの相対パス。 フィールド名はスラッシュ (`/`) で始まる必要があります（MUST）。 完全な URL を作成するために、[`Serverオブジェクト`](#serverオブジェクト) の `url` フィールドから展開された URL にパスが **追加** (相対 URL 解決なし) されます。 [パステンプレート](#パステンプレート) が許可されます。 URL を照合する場合、具体的な (テンプレート化されていない) パスは、テンプレート化された対応するパスよりも先に照合されます。 同じ階層でテンプレート化された名前が異なるテンプレート化されたパスは同一であるため、存在してはなりません（MUST NOT）。あいまいな一致の場合、どちらを使用するかはツール次第です。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### パステンプレートのマッチング
+次のパスを想定すると、具体的な定義 `/pets/mine` が使用された場合、最初に一致します。
+```
+  /pets/{petId}
+  /pets/mine
+```
+次のパスは同一で無効と見なされます。
+```
+  /pets/{petId}
+  /pets/{name}
+```
+次のものは、あいまいな解決につながる可能性があります。
+```
+  /{entity}/me
+  /books/{id}
+```
+
+#### Pathsオブジェクトの例
+```json
+{
+  "/pets": {
+    "get": {
+      "description": "Returns all pets from the system that the user has access to",
+      "responses": {
+        "200": {          
+          "description": "A list of pets.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/pet"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+```yaml
+/pets:
+  get:
+    description: Returns all pets from the system that the user has access to
+    responses:
+      '200':
+        description: A list of pets.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/pet'
+```
+
+### Path Itemオブジェクト
+1 つのパスで使用できる操作について説明します。
+[ACL制約](#セキュリティフィルタリング) により、パス項目は空になる場合があります（MAY）。
+パス自体は引き続きドキュメントビューアーに公開されますが、使用可能な操作とパラメーターはわかりません。
+
+#### 固定のフィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+$ref | `string` | このパス項目の参照定義を可能にします。 参照される構造は、[Path Itemオブジェクト](#path-itemオブジェクト) の形式でなければなりません（MUST）。 Path Itemオブジェクトフィールドが定義済みオブジェクトと参照先オブジェクトの両方にある場合、動作は未定義です。 [相対参照](#uriの相対参照) を解決するための規則を参照してください。
+summary| `string` | このパス内のすべての操作に適用することを目的とした、オプションの文字列の要約。
+description | `string` | このパス内のすべての操作に適用するためのオプションの文字列の説明。 [CommonMark構文](https://spec.commonmark.org/) は、リッチ テキスト表現に使用される場合があります（MAY）。
+get | [Operation](#operationオブジェクト) | このパスでの GET 操作の定義。
+put | [Operation](#operationオブジェクト) | このパスでの PUT 操作の定義。
+post | [Operation](#operationオブジェクト) |このパスでの POST 操作の定義。
+delete | [Operation](#operationオブジェクト) | このパスでの DELETE 操作の定義。
+options | [Operation](#operationオブジェクト) | このパスでの OPTIONS 操作の定義。
+head | [Operation](#operationオブジェクト) | このパスでの HEAD 操作の定義。
+patch | [Operation](#operationオブジェクト) | このパスでの PATCH 操作の定義。
+trace | [Operation](#operationオブジェクト) | このパスでの TRACE 操作の定義。
+servers | [[Server](#serverオブジェクト)] | このパス内のすべての操作を処理するための代替の`サーバー`配列。
+parameters | [[Parameter](#parameterオブジェクト) \| [Reference](#referenceオブジェクト)] | このパスで説明されているすべての操作に適用できるパラメーターのリスト。 これらのパラメーターは操作レベルでオーバーライドできますが、そこで削除することはできません。 リストには、重複したパラメーターを含めてはなりません（MUST NOT）。 一意のパラメーターは、名前と場所の組み合わせによって定義されます。 リストは、[Referenceオブジェクト](#referenceオブジェクト) を使用して、OpenAPI オブジェクトのコンポーネント/パラメーターで定義されているパラメーターにリンクできます。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Path Itemオブジェクトの例
+```json
+{
+  "get": {
+    "description": "Returns pets based on ID",
+    "summary": "Find pets by ID",
+    "operationId": "getPetsById",
+    "responses": {
+      "200": {
+        "description": "pet response",
+        "content": {
+          "*/*": {
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Pet"
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "description": "error payload",
+        "content": {
+          "text/html": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorModel"
+            }
+          }
+        }
+      }
+    }
+  },
+  "parameters": [
+    {
+      "name": "id",
+      "in": "path",
+      "description": "ID of pet to use",
+      "required": true,
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "style": "simple"
+    }
+  ]
+}
+```
+```yaml
+get:
+  description: Returns pets based on ID
+  summary: Find pets by ID
+  operationId: getPetsById
+  responses:
+    '200':
+      description: pet response
+      content:
+        '*/*' :
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Pet'
+    default:
+      description: error payload
+      content:
+        'text/html':
+          schema:
+            $ref: '#/components/schemas/ErrorModel'
+parameters:
+- name: id
+  in: path
+  description: ID of pet to use
+  required: true
+  schema:
+    type: array
+    items:
+      type: string  
+  style: simple
+```
+
+### Operationオブジェクト
+パス上の単一の API 操作を記述します。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+tags | [`string`] | API ドキュメント コントロールのタグのリスト。 タグは、リソースまたはその他の修飾子による操作の論理グループ化に使用できます。
+summary | `string` | 操作の概要。
+description | `string` | 操作動作の詳細な説明。 [CommonMark構文](https://spec.commonmark.org/) は、リッチ テキスト表現に使用される場合があります（MAY）。
+externalDocs | [External Documentation](#external-documentationオブジェクト) | この操作に関する追加の外部ドキュメント。
+operationId | `string` | 操作を識別するために使用される一意の文字列。 ID は、API に記述されているすべての操作の中で一意である必要があります（MUST）。 operationId の値は **大文字と小文字が区別されます**。 ツールとライブラリは、操作を一意に識別するために operationId を使用する場合がある（MAY）ため、一般的なプログラミング命名規則に従うことをお勧めします。
+parameters | [[Parameter](#parameterオブジェクト) \| [Reference](#referenceオブジェクト)] | この操作に適用できるパラメーターのリスト。 Path Item でパラメーターが既に定義されている場合、新しい定義はそれをオーバーライドしますが、削除することはできません。 リストには、重複したパラメーターを含めてはなりません（MUST NOT）。 一意のパラメーターは、名前と場所の組み合わせによって定義されます。 リストは、[Referenceオブジェクト](#referenceオブジェクト) を使用して、OpenAPI オブジェクトのコンポーネント/パラメーターで定義されているパラメーターにリンクできます。
+requestBody | [Request Body](#request-bodyオブジェクト) \| [Reference](#referenceオブジェクト) | この操作に適用されるリクエスト本文。 `requestBody` は、HTTP 1.1 仕様 [RFC7231](https://tools.ietf.org/html/rfc7231#section-4.3.1) でリクエスト ボディのセマンティクスが明示的に定義されている HTTP メソッドで完全にサポートされています。 HTTP 仕様が曖昧な場合 ([GET](https://tools.ietf.org/html/rfc7231#section-4.3.1)、[HEAD](https://tools.ietf.org/html/rfc7231#section-4.3.2) および [DELETE](https://tools.ietf.org/html/rfc7231#section-4.3.5))、`requestBody` は許可されていますが、明確に意味が定義されておらず、可能であれば避けるべきです（SHOULD）。
+responses | [Responses](#responsesオブジェクト) | この操作の実行から返される可能性のある応答のリスト。
+callbacks | Map[`string`, [Callback](#callbackオブジェクト) \| [Reference](#referenceオブジェクト)] | 親操作に関連する可能性のある帯域外コールバックのマップ。 キーは Callback オブジェクトの一意の識別子です。 マップ内の各値は [Callbackオブジェクト](#callbackオブジェクト) であり、API プロバイダーによって開始される可能性がある要求と、予想される応答を記述します。
+deprecated | `boolean` | この操作が非推奨であることを宣言します。 利用者は、宣言された操作の使用を控えるべきです（SHOULD）。 デフォルト値は`false`です。
+security | [[Security Requirement](#security-requirementオブジェクト)] | この操作に使用できるセキュリティ メカニズムの宣言。 値のリストには、使用できる代替のセキュリティ要件オブジェクトが含まれています。 要求を承認するには、セキュリティ要件オブジェクトの 1 つだけを満たす必要があります。 セキュリティをオプションにするために、空のセキュリティ要件 (`{}`) を配列に含めることができます。 この定義は、宣言された最上位の `security` をオーバーライドします。 最上位のセキュリティ宣言を削除するには、空の配列を使用できます。
+servers | [[Server](#serverオブジェクト)] | この操作を提供する代替の「サーバー」配列。 代替の「サーバー」オブジェクトがパス項目オブジェクトまたはルート レベルで指定されている場合、この値によってオーバーライドされます。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Operationオブジェクトの例
+```json
+{
+  "tags": [
+    "pet"
+  ],
+  "summary": "Updates a pet in the store with form data",
+  "operationId": "updatePetWithForm",
+  "parameters": [
+    {
+      "name": "petId",
+      "in": "path",
+      "description": "ID of pet that needs to be updated",
+      "required": true,
+      "schema": {
+        "type": "string"
+      }
+    }
+  ],
+  "requestBody": {
+    "content": {
+      "application/x-www-form-urlencoded": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "name": { 
+              "description": "Updated name of the pet",
+              "type": "string"
+            },
+            "status": {
+              "description": "Updated status of the pet",
+              "type": "string"
+            }
+          },
+          "required": ["status"] 
+        }
+      }
+    }
+  },
+  "responses": {
+    "200": {
+      "description": "Pet updated.",
+      "content": {
+        "application/json": {},
+        "application/xml": {}
+      }
+    },
+    "405": {
+      "description": "Method Not Allowed",
+      "content": {
+        "application/json": {},
+        "application/xml": {}
+      }
+    }
+  },
+  "security": [
+    {
+      "petstore_auth": [
+        "write:pets",
+        "read:pets"
+      ]
+    }
+  ]
+}
+```
+```yaml
+tags:
+- pet
+summary: Updates a pet in the store with form data
+operationId: updatePetWithForm
+parameters:
+- name: petId
+  in: path
+  description: ID of pet that needs to be updated
+  required: true
+  schema:
+    type: string
+requestBody:
+  content:
+    'application/x-www-form-urlencoded':
+      schema:
+       type: object
+       properties:
+          name: 
+            description: Updated name of the pet
+            type: string
+          status:
+            description: Updated status of the pet
+            type: string
+       required:
+         - status
+responses:
+  '200':
+    description: Pet updated.
+    content: 
+      'application/json': {}
+      'application/xml': {}
+  '405':
+    description: Method Not Allowed
+    content: 
+      'application/json': {}
+      'application/xml': {}
+security:
+- petstore_auth:
+  - write:pets
+  - read:pets
+```
+
+### External Documentationオブジェクト
+拡張ドキュメントの外部リソースを参照できるようにします。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+description | `string` | ターゲットドキュメントの説明。 [CommonMark構文](https://spec.commonmark.org/) は、リッチ テキスト表現に使用される場合があります（MAY）。
+url | `string` | **REQUIRED**. ターゲットドキュメントの URL。 これは URL の形式でなければなりません。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### External Documentationオブジェクトの例
+```json
+{
+  "description": "Find more info here",
+  "url": "https://example.com"
+}
+```
+```yaml
+description: Find more info here
+url: https://example.com
+```
+
+### Parameterオブジェクト
+単一の操作のパラメーターを記述します。
+
+一意のパラメーターは、名前と場所の組み合わせによって定義されます。
+
+#### Parameterの場所
+`in` フィールドで指定できるパラメータの場所は 4 つあります。
+* path - [パステンプレート](#pathTemplating) と一緒に使用されます。ここで、パラメータ値は実際には操作の URL の一部です。 これには、API のホストまたはベースパスは含まれません。 たとえば、`/items/{itemId}` では、パスパラメータは `itemId` です。
+* query - URL に追加されるパラメーター。 たとえば、`/items?id=###` では、クエリパラメータは `id` です。
+* header - リクエストの一部として期待されるカスタムヘッダー。 [RFC7230](https://tools.ietf.org/html/rfc7230#page-22) では、ヘッダー名は大文字と小文字が区別されないと述べていることに注意してください。
+* cookie - 特定の Cookie 値を API に渡すために使用されます。
+
+#### 固定フィールド
+Field Name | Type | Description
+---|:---:|---
+name | `string` | **REQUIRED**. パラメータの名前。 パラメータ名は *大文字と小文字を区別します*。 <ul><li>`in` が `"path"` の場合、`name` フィールドは [Pathsオブジェクト](#pathsオブジェクト) の path フィールド内で発生するテンプレート式に対応する必要があります（MUST）。 詳細については、[パステンプレート](#パステンプレート)を参照してください。<li>`in` が `"header"` で、`name` フィールドが `"Accept"`、`"Content-Type"` または `"Authorization"` の場合、パラメータ定義は無視されます（SHALL）。<li>それ以外の場合、`name` は `in` プロパティで使用されるパラメータ名に対応します。</ul>
+in | `string` | **REQUIRED**. パラメータの場所。 可能な値は `"query"`、`"header"`、`"path"` または `"cookie"` です。
+description | `string` | パラメータの簡単な説明。 これには使用例が含まれる場合があります。 [CommonMark構文](https://spec.commonmark.org/) は、リッチ テキスト表現に使用される場合があります（MAY）。
+required | `boolean` | このパラメータが必須かどうかを決定します。 パラメーターの場所が `"path"` の場合、このプロパティは **必須** であり、その値は `true` でなければなりません（MUST）。 それ以外の場合、プロパティを含めることができ（MAY）、そのデフォルト値は `false` です。
+deprecated | `boolean` | パラメータが非推奨であり、使用されないようにする必要があることを指定します（SHOULD）。 デフォルト値は `false` です。
+allowEmptyValue | `boolean` | 空の値のパラメーターを渡す機能を設定します。 これは `query` パラメータに対してのみ有効で、空の値を持つパラメータを送信できます。 デフォルト値は `false` です。 `style` が使用され、動作が `n/a` (シリアル化できない) の場合、`allowEmptyValue` の値は無視されます。 後の改訂で削除される可能性があるため、このプロパティの使用は推奨されません（NOT RECOMMENDED）。
+
+パラメータのシリアル化のルールは、2 つの方法のいずれかで指定されます。
+より単純なシナリオでは、`schema` と `style` でパラメーターの構造と構文を記述できます。
+
+フィールド名 | 型 | 説明
+---|:---:|---
+style | `string` | パラメータ値のタイプに応じて、パラメータ値がどのようにシリアル化されるかを記述します。 デフォルト値 (`in` の値に基づく): `query` は `form` 。  `path` は `simple`。 `header` は `simple`。 `cookie` は `form`。
+explode | `boolean` | これが true の場合、タイプ `array` または `object` のパラメーター値は、配列の各値またはマップのキーと値のペアに対して個別のパラメーターを生成します。 他のタイプのパラメーターの場合、このプロパティは効果がありません。 `style` が `form` の場合、デフォルト値は `true` です。 他のすべてのスタイルの場合、デフォルト値は `false` です。
+allowReserved | `boolean` | [RFC3986](https://tools.ietf.org/html/rfc3986#section-2.2) で定義されているように、パラメーター値が予約文字を許可する必要があるか、つまり、`:/?#[]@!$&'()*+,;=` をパーセントエンコーディングなしで含めるかどうかを決定します（SHOULD）。 このプロパティは、`in` 値が `query` のパラメータにのみ適用されます。 デフォルト値は `false` です。
+schema | [Schema](#schemaオブジェクト) | パラメータに使用される型を定義するスキーマ。
+example | Any | パラメータの潜在的な値の例。 この例は、指定されたスキーマとエンコーディング プロパティが存在する場合、一致する必要があります（SHOULD）。 `example` フィールドは `examples` フィールドと相互に排他的です。 さらに、例を含む `schema` を参照する場合、`example` の値は、スキーマによって提供される例を_オーバーライド_する必要があります（SHALL）。 JSON または YAML で自然に表現できないメディアタイプの例を表すために、必要に応じてエスケープして文字列値に例を含めることができます。
+examples | Map[ `string`, [Example](#exampleオブジェクト) \| [Reference](#referenceオブジェクト)] | パラメータの潜在的な値の例。 各例には、パラメーターのエンコーディングで指定された正しい形式の値を含める必要があります（SHOULD）。 `examples` フィールドは `example` フィールドと相互に排他的です。 さらに、例を含む `schema` を参照する場合、`examples` の値は、スキーマによって提供される例を _オーバーライド_ する必要があります。
+
+より複雑なシナリオでは、`content` プロパティでパラメーターのメディアタイプとスキーマを定義できます。
+パラメータには、`schema` プロパティまたは `content` プロパティのいずれかを含める必要がありますが、両方を含めることはできません（MUST）。
+`example` または `examples` が `schema` オブジェクトと組み合わせて提供される場合、その例は、パラメータに対して規定されたシリアライゼーション戦略に従わなければなりません（MUST）。
+
+フィールド名 | 型 | 説明
+---|:---:|---
+content | Map[`string`, [Media Type](#media-typeオブジェクト)] | パラメータの表現を含むマップ。 キーはメディア タイプで、値はそれを表します。マップにはエントリを 1 つだけ含める必要があります（MUST）。
+
+#### Styleの値
+シリアル化する一般的な方法をサポートするために、単純なパラメーターとして、一連の `style` 値が定義れています。
+
+`style` | `型` |  `in` | コメント
+----------- | ------ | -------- | --------
+matrix |  `primitive`, `array`, `object` |  `path` | [RFC6570](https://tools.ietf.org/html/rfc6570#section-3.2.7) で定義されたパススタイルパラメータ
+label | `primitive`, `array`, `object` |  `path` | [RFC6570](https://tools.ietf.org/html/rfc6570#section-3.2.5) で定義されたラベルスタイルパラメーター
+form |  `primitive`, `array`, `object` |  `query`, `cookie` | [RFC6570](https://tools.ietf.org/html/rfc6570#section-3.2.8) で定義されたフォーム スタイル パラメーター。 このオプションは、`collectionFormat` を OpenAPI 2.0 の `csv` (`explode` が false の場合) または `multi` (`explode` が true の場合) の値に置き換えます。
+simple | `array` | `path`, `header` | [RFC6570](https://tools.ietf.org/html/rfc6570#section-3.2.2) で定義された単純なスタイル パラメーター。 このオプションは、`collectionFormat` を OpenAPI 2.0 の `csv` 値に置き換えます。
+spaceDelimited | `array`, `object` | `query` | スペースで区切られた配列またはオブジェクト値。 このオプションは、OpenAPI 2.0 の `ssv` に相当する `collectionFormat` を置き換えます。
+pipeDelimited | `array`, `object` | `query` | パイプで区切られた配列またはオブジェクトの値。 このオプションは、OpenAPI 2.0 の `pipes` に相当する `collectionFormat` を置き換えます。
+deepObject | `object` | `query` | フォーム パラメータを使用してネストされたオブジェクトをレンダリングする簡単な方法を提供します。
+
+#### Styleの例
+`color` という名前のパラメーターが次のいずれかの値を持つとします。
+```
+   string -> "blue"
+   array -> ["blue","black","brown"]
+   object -> { "R": 100, "G": 200, "B": 150 }
+```
+次の表は、各値のレンダリングの違いの例を示しています。
+
+[`style`](#styleの値) | `explode` | `empty` | `string` | `array` | `object`
+----------- | ------ | -------- | -------- | -------- | -------
+matrix | false | ;color | ;color=blue | ;color=blue,black,brown | ;color=R,100,G,200,B,150
+matrix | true | ;color | ;color=blue | ;color=blue;color=black;color=brown | ;R=100;G=200;B=150
+label | false | .  | .blue |  .blue.black.brown | .R.100.G.200.B.150
+label | true | . | .blue |  .blue.black.brown | .R=100.G=200.B=150
+form | false | color= | color=blue | color=blue,black,brown | color=R,100,G,200,B,150
+form | true | color= | color=blue | color=blue&color=black&color=brown | R=100&G=200&B=150
+simple | false | n/a | blue | blue,black,brown | R,100,G,200,B,150
+simple | true | n/a | blue | blue,black,brown | R=100,G=200,B=150
+spaceDelimited | false | n/a | n/a | blue%20black%20brown | R%20100%20G%20200%20B%20150
+pipeDelimited | false | n/a | n/a | blue\|black\|brown | R\|100\|G\|200\|B\|150
+deepObject | true | n/a | n/a | n/a | color[R]=100&color[G]=200&color[B]=150
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Parameterオブジェクトの例
+64 ビット整数の配列を持つヘッダー パラメータ:
+```json
+{
+  "name": "token",
+  "in": "header",
+  "description": "token to be passed as a header",
+  "required": true,
+  "schema": {
+    "type": "array",
+    "items": {
+      "type": "integer",
+      "format": "int64"
+    }
+  },
+  "style": "simple"
+}
+```
+```yaml
+name: token
+in: header
+description: token to be passed as a header
+required: true
+schema:
+  type: array
+  items:
+    type: integer
+    format: int64
+style: simple
+```
+文字列値のパス パラメータ:
+```json
+{
+  "name": "username",
+  "in": "path",
+  "description": "username to fetch",
+  "required": true,
+  "schema": {
+    "type": "string"
+  }
+}
+```
+```yaml
+name: username
+in: path
+description: username to fetch
+required: true
+schema:
+  type: string
+```
+文字列値のオプションのクエリ パラメータ。クエリ パラメータを繰り返すことで複数の値を許可します。
+```json
+{
+  "name": "id",
+  "in": "query",
+  "description": "ID of the object to fetch",
+  "required": false,
+  "schema": {
+    "type": "array",
+    "items": {
+      "type": "string"
+    }
+  },
+  "style": "form",
+  "explode": true
+}
+```
+```yaml
+name: id
+in: query
+description: ID of the object to fetch
+required: false
+schema:
+  type: array
+  items:
+    type: string
+style: form
+explode: true
+```
+特定のタイプの未定義のパラメーターを許可する自由形式のクエリ パラメーター:
+```json
+{
+  "in": "query",
+  "name": "freeForm",
+  "schema": {
+    "type": "object",
+    "additionalProperties": {
+      "type": "integer"
+    },
+  },
+  "style": "form"
+}
+```
+```yaml
+in: query
+name: freeForm
+schema:
+  type: object
+  additionalProperties:
+    type: integer
+style: form
+```
+`content` を使用してシリアライゼーションを定義する複雑なパラメータ:
+```json
+{
+  "in": "query",
+  "name": "coordinates",
+  "content": {
+    "application/json": {
+      "schema": {
+        "type": "object",
+        "required": [
+          "lat",
+          "long"
+        ],
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "long": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}
+```
+```yaml
+in: query
+name: coordinates
+content:
+  application/json:
+    schema:
+      type: object
+      required:
+        - lat
+        - long
+      properties:
+        lat:
+          type: number
+        long:
+          type: number
+```
+
+### Request Bodyオブジェクト
+単一のリクエストボディを記述します。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+description | `string` | リクエスト本文の簡単な説明。 これには使用例が含まれる場合があります。 [CommonMark構文](https://spec.commonmark.org/) は、リッチ テキスト表現に使用される場合があります（MAY）。
+content | Map[`string`, [Media Type](#media-typeオブジェクト)] | **REQUIRED**. リクエストボディの内容。 キーはメディア タイプまたは [メディアタイプの範囲](https://tools.ietf.org/html/rfc7231#appendix-D) であり、値はそれを説明します。 複数のキーに一致するリクエストの場合、最も限定的なキーのみが適用されます。 例えば text/plain は text/* をオーバーライドします
+required | `boolean` | リクエストでリクエストボディが必要かどうかを決定します。 デフォルトは `false` です。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Request Bodyの例
+参照モデル定義を含むリクエストボディ。
+```json
+{
+  "description": "user to add to the system",
+  "content": {
+    "application/json": {
+      "schema": {
+        "$ref": "#/components/schemas/User"
+      },
+      "examples": {
+          "user" : {
+            "summary": "User Example", 
+            "externalValue": "https://foo.bar/examples/user-example.json"
+          } 
+        }
+    },
+    "application/xml": {
+      "schema": {
+        "$ref": "#/components/schemas/User"
+      },
+      "examples": {
+          "user" : {
+            "summary": "User example in XML",
+            "externalValue": "https://foo.bar/examples/user-example.xml"
+          }
+        }
+    },
+    "text/plain": {
+      "examples": {
+        "user" : {
+            "summary": "User example in Plain text",
+            "externalValue": "https://foo.bar/examples/user-example.txt" 
+        }
+      } 
+    },
+    "*/*": {
+      "examples": {
+        "user" : {
+            "summary": "User example in other format",
+            "externalValue": "https://foo.bar/examples/user-example.whatever"
+        }
+      }
+    }
+  }
+}
+```
+```yaml
+description: user to add to the system
+content: 
+  'application/json':
+    schema:
+      $ref: '#/components/schemas/User'
+    examples:
+      user:
+        summary: User Example
+        externalValue: 'https://foo.bar/examples/user-example.json'
+  'application/xml':
+    schema:
+      $ref: '#/components/schemas/User'
+    examples:
+      user:
+        summary: User example in XML
+        externalValue: 'https://foo.bar/examples/user-example.xml'
+  'text/plain':
+    examples:
+      user:
+        summary: User example in Plain text
+        externalValue: 'https://foo.bar/examples/user-example.txt'
+  '*/*':
+    examples:
+      user: 
+        summary: User example in other format
+        externalValue: 'https://foo.bar/examples/user-example.whatever'
+```
+文字列値の配列である body パラメーター:
+```json
+{
+  "description": "user to add to the system",
+  "required": true,
+  "content": {
+    "text/plain": {
+      "schema": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
+```
+```yaml
+description: user to add to the system
+required: true
+content:
+  text/plain:
+    schema:
+      type: array
+      items:
+        type: string
+```
+
+### Media Typeオブジェクト
+各メディアタイプオブジェクトは、そのキーによって識別されるメディアタイプのスキーマと例を提供します。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+schema | [Schema](#schemaオブジェクト) | リクエスト、レスポンス、またはパラメータの内容を定義するスキーマ。
+example | Any | メディアタイプの例。 exampleオブジェクトは、メディアタイプで指定された正しい形式にする必要があります（SHOULD）。 `example` フィールドは `examples` フィールドと相互に排他的です。 さらに、exampleを含む `schema` を参照する場合、`example` の値は、スキーマによって提供される例を _オーバーライド_ する必要があります（SHALL）。
+examples | Map[ `string`, [Example](#exampleオブジェクト) \| [Reference](#referenceオブジェクト)] | メディアタイプの例。 各exampleオブジェクトは、メディアタイプと指定されたスキーマ (存在する場合) に一致する必要があります（SHOULD）。 `examples` フィールドは `example` フィールドと相互に排他的です。 さらに、exampleを含む `schema` を参照する場合、`examples` の値は、スキーマによって提供される例を _オーバーライド_ する必要があります。
+encoding | Map[`string`, [Encoding](#encodingオブジェクト)] | プロパティ名とそのエンコード情報の間のマップ。 プロパティ名であるキーは、プロパティとしてスキーマに存在する必要があります（MUST）。 メディアタイプが `multipart` または `application/x-www-form-urlencoded` の場合、エンコーディングオブジェクトは `requestBody` オブジェクトにのみ適用されます。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Media Typeの例
+```json
+{
+  "application/json": {
+    "schema": {
+         "$ref": "#/components/schemas/Pet"
+    },
+    "examples": {
+      "cat" : {
+        "summary": "An example of a cat",
+        "value": 
+          {
+            "name": "Fluffy",
+            "petType": "Cat",
+            "color": "White",
+            "gender": "male",
+            "breed": "Persian"
+          }
+      },
+      "dog": {
+        "summary": "An example of a dog with a cat's name",
+        "value" :  { 
+          "name": "Puma",
+          "petType": "Dog",
+          "color": "Black",
+          "gender": "Female",
+          "breed": "Mixed"
+        },
+      "frog": {
+          "$ref": "#/components/examples/frog-example"
+        }
+      }
+    }
+  }
+}
+```
+```yaml
+application/json: 
+  schema:
+    $ref: "#/components/schemas/Pet"
+  examples:
+    cat:
+      summary: An example of a cat
+      value:
+        name: Fluffy
+        petType: Cat
+        color: White
+        gender: male
+        breed: Persian
+    dog:
+      summary: An example of a dog with a cat's name
+      value:
+        name: Puma
+        petType: Dog
+        color: Black
+        gender: Female
+        breed: Mixed
+    frog:
+      $ref: "#/components/examples/frog-example"
+```
+#### ファイルアップロードに関する考慮事項
+2.0 の仕様とは対照的に、OpenAPI の `file` 入出力コンテンツは、他のスキーマタイプと同じセマンティクスで記述されます。
+
+3.0 仕様とは対照的に、`format` キーワードはスキーマのコンテンツ エンコーディングには影響しません。 JSON スキーマは、スキーマの `Content-Encoding` を指定するために使用できる `contentEncoding` キーワードを提供します。 `contentEncoding` キーワードは、[RFC4648](https://tools.ietf.org/html/rfc4648) で定義されているすべてのエンコーディングをサポートしています。これには、[RFC2045](https://tools.ietf.org/html/rfc2045#section-6.7) の「quoted-printable」だけでなく、「base64」と「base64url」も含まれます。  `contentEncoding` キーワードで指定されたエンコーディングは、マルチパートボディの要求または応答またはメタデータの `Content-Type` ヘッダーで指定されたエンコーディングとは無関係です。両方が存在する場合、`contentEncoding` で指定されたエンコーディングが最初に適用され、次に `Content-Type` ヘッダーで指定されたエンコーディングが適用されます。
+
+JSON スキーマには、`contentMediaType` キーワードも用意されています。 ただし、メディアタイプオブジェクトのキー、または [Encodingオブジェクト](#encodingオブジェクト) の `contentType` フィールドによってメディア タイプがすでに指定されている場合、`contentMediaType` キーワードが存在する場合は無視する必要があります（SHALL）。
+
+例:
+
+バイナリ (オクテットストリーム) で転送されるコンテンツは、`schema` を省略しても構いません (MAY):
+
+```yaml
+# a PNG image as a binary file:
+content:
+    image/png: {}
+```
+```yaml
+# an arbitrary binary file:
+content:
+    application/octet-stream: {}
+```
+base64 エンコーディングで転送されたバイナリ コンテンツ:
+```yaml
+content:
+    image/png:
+        schema:
+            type: string
+            contentMediaType: image/png
+            contentEncoding: base64
+```
+
+`Content-Type` は `image/png` のままで、ペイロードのセマンティクスを記述していることに注意してください。 JSON スキーマの `type` フィールドと `contentEncoding` フィールドは、ペイロードがテキストとして転送されることを示しています。 JSON スキーマの `contentMediaType` は技術的に冗長ですが、OpenAPI コンテキストを認識しない可能性がある JSON スキーマツールで使用できます。
+
+これらの例は、ファイル アップロードの入力ペイロードまたは応答ペイロードのいずれかに適用されます。
+
+`POST` 操作でファイルを送信するための `requestBody` は、次の例のようになります。
+
+```yaml
+requestBody:
+  content:
+    application/octet-stream: {}
+```
+さらに、特定のメディアタイプを指定することができます（MAY）:
+```yaml
+# multiple, specific media types may be specified:
+requestBody:
+  content:
+    # a binary file of type png or jpeg
+    image/jpeg: {}
+    image/png: {}
+```
+複数のファイルをアップロードするには、`multipart` メディアタイプを使用する必要があります（MUST）。
+```yaml
+requestBody:
+  content:
+    multipart/form-data:
+      schema:
+        properties:
+          # The property name 'file' will be used for all files.
+          file:
+            type: array
+            items: {}
+```
+以下の `multipart/form-data` のセクションで見られるように、`items` の空のスキーマは `application/octet-stream` のメディアタイプを示します。
+
+#### x-www-form-urlencodedリクエストボディのサポート
+[RFC1866](https://tools.ietf.org/html/rfc1866) 経由でフォーム URL エンコーディングを使用してコンテンツを送信するには、次の定義を使用できます。
+```yaml
+requestBody:
+  content:
+    application/x-www-form-urlencoded:
+      schema:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          address:
+            # complex types are stringified to support RFC 1866
+            type: object
+            properties: {}
+```
+この例では、`requestBody` のコンテンツは、サーバーに渡されるときに [RFC1866](https://tools.ietf.org/html/rfc1866/) に従って文字列化する必要があります（MUST）。 さらに、`address` フィールドの複合オブジェクトは文字列化されます。
+
+`application/x-www-form-urlencoded` コンテンツ タイプで複雑なオブジェクトを渡す場合、そのようなプロパティのデフォルトのシリアル化戦略は [`Encodingオブジェクト`](#encodingオブジェクト) の `style` プロパティを `form` として使用します。
+
+#### `multipart` コンテンツに関する特別な考慮事項
+リクエストボディをオペレーションに渡す際の `Content-Type` として `multipart/form-data` を使うのが一般的です。 2.0 の仕様とは対照的に、`multipart` コンテンツを使用する場合、オペレーションへの入力パラメータを定義するために `schema` が必要です（MUST）。 これにより、複雑な構造がサポートされるだけでなく、複数のファイルをアップロードするためのメカニズムもサポートされます。
+
+`multipart/form-data` リクエスト本文では、各schemaプロパティ、またはschema配列プロパティの各要素は、[RFC7578](https://tools.ietf.org/html/rfc7578) で定義されている内部ヘッダーを含むペイロードのセクションを取ります。`multipart/form-data` リクエスト本文の各プロパティのシリアル化戦略は、関連する [`Encodingオブジェクト`](#encodingオブジェクト) で指定できます。
+
+`multipart` タイプを渡す場合、転送されるコンテンツのセクションを区切るために境界を使用してもよい (MAY) – したがって、次のデフォルトの `Content-Type` が `multipart` に対して定義されている:
+
+* プロパティがプリミティブまたはプリミティブ値の配列である場合、デフォルトの Content-Type は `text/plain` になります。
+* プロパティが複雑な場合、または複雑な値の配列である場合、デフォルトの Content-Type は `application/json` になります。
+* プロパティが `contentEncoding` を含む `type: string` の場合、デフォルトの Content-Type は `application/octet-stream` になります。
+
+JSON スキーマ仕様に従って、`contentEncoding` が存在しない `contentMediaType` は、`contentEncoding: identity` が存在するかのように扱われます。`text/html` などのテキストドキュメントを JSON 文字列に埋め込むのに便利ですが、`multipart/form-data` 部分には役に立ちません。
+ドキュメントが実際のメディア タイプではなく `text/plain` として扱われるだけです。`contentEncoding` が不要な場合は、`contentMediaType` なしで Encoding オブジェクトを使用します。
+
+例:
+
+```yaml
+requestBody:
+  content:
+    multipart/form-data:
+      schema:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          address:
+            # default Content-Type for objects is `application/json`
+            type: object
+            properties: {}
+          profileImage:
+            # Content-Type for application-level encoded resource is `text/plain`
+            type: string
+            contentMediaType: image/png
+            contentEncoding: base64
+          children:
+            # default Content-Type for arrays is based on the _inner_ type (`text/plain` here)
+            type: array
+            items:
+              type: string
+          addresses:
+            # default Content-Type for arrays is based on the _inner_ type (object shown, so `application/json` in this example)
+            type: array
+            items:
+              type: object
+              $ref: '#/components/schemas/Address'
+```
+`encoding` 属性が導入され、`multipart` リクエスト本文のパーツのシリアル化を制御できるようになりました。 この属性は、`multipart` および `application/x-www-form-urlencoded` リクエスト ボディに _のみ_ 適用されます。
+
+### Encodingオブジェクト
+単一の schema プロパティに適用される単一のエンコーディングの定義。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+contentType | `string` | 特定のプロパティをエンコードするための Content-Type。 デフォルト値はプロパティタイプによって異なります。 `object` は `application/json`。 `array` は、デフォルトは内部型に基づいて定義されます。 他のすべてのケースでは、デフォルトは `application/octet-stream` です。 値は、特定のメディアタイプ (例: `application/json`)、ワイルドカードメディアタイプ (例: `image/*`)、または 2 つのタイプのカンマ区切りのリストにすることができます。
+headers | Map[`string`, [Header](#headerオブジェクト) \| [Reference](#referenceオブジェクト)] | `Content-Disposition` などの追加情報をヘッダーとして提供できるようにするマップ。 `Content-Type` は個別に説明されており、このセクションでは無視されます（SHALL）。 リクエスト本文のメディアタイプが `multipart` でない場合、このプロパティは無視されます（SHALL）。
+style | `string` | タイプに応じて、特定のプロパティ値がどのようにシリアル化されるかを記述します。 `style` プロパティの詳細については、[Parameterオブジェクト](#parameterオブジェクト) を参照してください。 動作は、デフォルト値を含め、`query` パラメーターと同じ値に従います。 リクエスト本文のメディアタイプが `application/x-www-form-urlencoded` または `multipart/form-data` でない場合、このプロパティは無視されます（SHALL）。 値が明示的に定義されている場合、`contentType` (暗黙的または明示的) の値は無視されます（SHALL）。
+explode | `boolean` | これが true の場合、タイプ `array` または `object` のプロパティ値は、配列の各値、またはマップのキーと値のペアに対して個別のパラメーターを生成します。 他のタイプのプロパティの場合、このプロパティは効果がありません。 `style` が `form` の場合、デフォルト値は `true` です。 他のすべてのスタイルの場合、デフォルト値は `false` です。 リクエスト本文のメディア タイプが `application/x-www-form-urlencoded` または `multipart/form-data` でない場合、このプロパティは無視されます（SHALL）。 値が明示的に定義されている場合、`contentType` (暗黙的または明示的) の値は無視されます（SHALL）。
+allowReserved | `boolean` | [RFC3986](https://tools.ietf.org/html/rfc3986#section-2.2) で定義されているように、パラメーター値が `:/?#[]@!$&'()*+,;=` の予約文字をパーセントエンコーディングなしで含めることを許可する必要があるかどうかを決定します。デフォルト値は `false` です。 リクエスト本文のメディアタイプが `application/x-www-form-urlencoded` または `multipart/form-data` でない場合、このプロパティは無視されます（SHALL）。 値が明示的に定義されている場合、`contentType` (暗黙的または明示的) の値は無視されます（SHALL）。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Encodingオブジェクトの例
+```yaml
+requestBody:
+  content:
+    multipart/form-data:
+      schema:
+        type: object
+        properties:
+          id:
+            # default is text/plain
+            type: string
+            format: uuid
+          address:
+            # default is application/json
+            type: object
+            properties: {}
+          historyMetadata:
+            # need to declare XML format!
+            description: metadata in XML format
+            type: object
+            properties: {}
+          profileImage: {}
+      encoding:
+        historyMetadata:
+          # require XML Content-Type in utf-8 encoding
+          contentType: application/xml; charset=utf-8
+        profileImage:
+          # only accept png/jpeg
+          contentType: image/png, image/jpeg
+          headers:
+            X-Rate-Limit-Limit:
+              description: The number of allowed requests in the current period
+              schema:
+                type: integer
+```
+
+### Responsesオブジェクト
+操作の予想される応答のコンテナー。
+コンテナーは、HTTP 応答コードを予期される応答にマップします。
+
+HTTP 応答コードは事前にわかっていない可能性があるため、ドキュメントがすべての可能な HTTP 応答コードをカバーしているとは必ずしも期待されていません。
+ただし、ドキュメントには、正常な操作の応答と既知のエラーが含まれていることが期待されます。
+
+`default` は、`Responses オブジェクト` によって個別にカバーされていないすべての HTTP コードのデフォルトの応答オブジェクトとして使用される場合があります（MAY）。
+
+`Responses オブジェクト` には、少なくとも 1 つの応答コードが含まれている必要があり（MUST）、応答コードが 1 つだけ提供されている場合は、操作呼び出しが成功した場合の応答である必要があります（SHOULD）。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+default | [Response](#responsesオブジェクト) \| [Reference](#referenceオブジェクト) | 特定の HTTP 応答コードに対して宣言されたもの以外の応答のドキュメント。 このフィールドを使用して、宣言されていない応答をカバーします。
+
+#### パターン化されたフィールド
+フィールドのパターン | 型 | 説明
+---|:---:|---
+HTTP Status Code | [Response](#responsesオブジェクト) \| [Reference](#referenceオブジェクト) | 任意の HTTP ステータスコードをプロパティ名として使用できますが、その HTTP ステータスコードに対して予想される応答を記述するために、コードごとに 1 つのプロパティのみを使用できます。 このフィールドは、JSON と YAML の間の互換性のために引用符 (たとえば、"200") で囲む必要があります。 応答コードの範囲を定義するために、このフィールドには大文字のワイルドカード文字 `X` を含めることができます。 たとえば、`2XX` は `[200-299]` の間のすべての応答コードを表します。 次の範囲定義のみが許可されます: `1XX`、`2XX`、`3XX`、`4XX`、`5XX`。 応答が明示的なコードを使用して定義されている場合、明示的なコードの定義は、そのコードの範囲の定義よりも優先されます。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Responsesオブジェクトの例
+操作が成功した場合の 200 応答と、それ以外の場合の既定の応答 (エラーを意味する):
+```json
+{
+  "200": {
+    "description": "a pet to be returned",
+    "content": {
+      "application/json": {
+        "schema": {
+          "$ref": "#/components/schemas/Pet"
+        }
+      }
+    }
+  },
+  "default": {
+    "description": "Unexpected error",
+    "content": {
+      "application/json": {
+        "schema": {
+          "$ref": "#/components/schemas/ErrorModel"
+        }
+      }
+    }
+  }
+}
+```
+```yaml
+'200':
+  description: a pet to be returned
+  content: 
+    application/json:
+      schema:
+        $ref: '#/components/schemas/Pet'
+default:
+  description: Unexpected error
+  content:
+    application/json:
+      schema:
+        $ref: '#/components/schemas/ErrorModel'
+```
+
+### Responseオブジェクト
+API 操作からの 1 つの応答を記述します。これには、応答に基づく操作への設計時の静的な `link` が含まれます。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+description | `string` | **REQUIRED**. 応答の説明。 [CommonMark構文](https://spec.commonmark.org/) が、リッチテキスト表現に使用される場合があります（MAY）。
+headers | Map[`string`, [Header](#headerオブジェクト)  \| [Reference](#referenceオブジェクト)] | ヘッダー名をその定義にマップします。 [RFC7230](https://tools.ietf.org/html/rfc7230#page-22) は、ヘッダー名は大文字と小文字を区別しないと述べています。 応答ヘッダーが `"Content-Type"` という名前で定義されている場合、それは無視されます（SHALL）。
+content | Map[`string`, [Media Type](#media-typeオブジェクト)] |潜在的な応答ペイロードの説明を含むマップ。 キーはメディアタイプまたは [メディアタイプの範囲](https://tools.ietf.org/html/rfc7231#appendix-D) で、値はそれを説明します。 複数のキーに一致する応答の場合、最も具体的なキーのみが適用されます。 例えば text/plain は text/* をオーバーライドします
+links | Map[`string`, [Link](#linkオブジェクト) \| [Reference](#referenceオブジェクト)] | 応答からたどることができる操作リンクのマップ。 マップのキーは、[Componentオブジェクト](#componentsオブジェクト) の名前の命名規則に従ったリンクの短い名前です。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Responseオブジェクトの例
+複合型の配列の応答:
+```json
+{
+  "description": "A complex object array response",
+  "content": {
+    "application/json": {
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/VeryComplexType"
+        }
+      }
+    }
+  }
+}
+```
+```yaml
+description: A complex object array response
+content: 
+  application/json:
+    schema: 
+      type: array
+      items:
+        $ref: '#/components/schemas/VeryComplexType'
+```
+文字列型の応答:
+```json
+{
+  "description": "A simple string response",
+  "content": {
+    "text/plain": {
+      "schema": {
+        "type": "string"
+      }
+    }
+  }
+
+}
+```
+```yaml
+description: A simple string response
+content:
+  text/plain:
+    schema:
+      type: string
+```
+ヘッダー付きのプレーンテキストの応答:
+```json
+{
+  "description": "A simple string response",
+  "content": {
+    "text/plain": {
+      "schema": {
+        "type": "string",
+        "example": "whoa!"
+      }
+    }
+  },
+  "headers": {
+    "X-Rate-Limit-Limit": {
+      "description": "The number of allowed requests in the current period",
+      "schema": {
+        "type": "integer"
+      }
+    },
+    "X-Rate-Limit-Remaining": {
+      "description": "The number of remaining requests in the current period",
+      "schema": {
+        "type": "integer"
+      }
+    },
+    "X-Rate-Limit-Reset": {
+      "description": "The number of seconds left in the current period",
+      "schema": {
+        "type": "integer"
+      }
+    }
+  }
+}
+```
+```yaml
+description: A simple string response
+content:
+  text/plain:
+    schema:
+      type: string
+    example: 'whoa!'
+headers:
+  X-Rate-Limit-Limit:
+    description: The number of allowed requests in the current period
+    schema:
+      type: integer
+  X-Rate-Limit-Remaining:
+    description: The number of remaining requests in the current period
+    schema:
+      type: integer
+  X-Rate-Limit-Reset:
+    description: The number of seconds left in the current period
+    schema:
+      type: integer
+```
+戻り値のない応答:
+```json
+{
+  "description": "object created"
+}
+```
+```yaml
+description: object created
+```
+
+### Callbackオブジェクト
+親操作に関連する可能性のある帯域外コールバックのマップ。
+マップ内の各値は [Path Itemオブジェクト](#path-itemオブジェクト) であり、API プロバイダーによって開始される可能性がある一連の要求と、予想される応答を記述します。
+パス項目オブジェクトを識別するために使用されるキー値は、実行時に評価される式であり、コールバック操作に使用する URL を識別します。
+
+別の API 呼び出しから独立した API プロバイダーからの着信要求を記述するには、`webhooks` フィールドを使用します。
+
+#### パターン化されたフィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+{expression} | [Path Item](#path-itemオブジェクト) \| [Reference](#referenceオブジェクト) | コールバック要求と予期される応答を定義するために使用されるパス項目オブジェクト、またはその参照。 [完全な例](https://github.com/OAI/OpenAPI-Specification/blob/main/examples/v3.0/callback-example.yaml) が参照可能です。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Key式
+[Path Itemオブジェクト](#path-itemオブジェクト) を識別するキーは、ランタイム HTTP リクエスト/レスポンスのコンテキストで評価できる [実行時式](#実行時式) であり、コールバックリクエストに使用される URL を識別します。
+簡単な例は、`$request.body#/url` かもしれません。
+ただし、[実行時式](#実行時式) を使用すると、完全な HTTP メッセージにアクセスできます。
+これには、JSON ポインター [RFC6901](https://tools.ietf.org/html/rfc6901) が参照できる本文の任意の部分へのアクセスが含まれます。
+
+たとえば、次の HTTP 要求があるとします。
+
+```http
+POST /subscribe/myevent?queryUrl=https://clientdomain.com/stillrunning HTTP/1.1
+Host: example.org
+Content-Type: application/json
+Content-Length: 187
+
+{
+  "failedUrl" : "https://clientdomain.com/failed",
+  "successUrls" : [
+    "https://clientdomain.com/fast",
+    "https://clientdomain.com/medium",
+    "https://clientdomain.com/slow"
+  ] 
+}
+
+201 Created
+Location: https://example.org/subscription/1
+```
+次の例は、コールバック操作に `eventType` という名前のパスパラメータと `queryUrl` という名前のクエリパラメータがあると仮定して、さまざまな式がどのように評価されるかを示しています。
+
+式 | 値 
+---|:---
+$url | https://example.org/subscribe/myevent?queryUrl=https://clientdomain.com/stillrunning
+$method | POST
+$request.path.eventType | myevent
+$request.query.queryUrl | https://clientdomain.com/stillrunning
+$request.header.content-Type | application/json
+$request.body#/failedUrl | https://clientdomain.com/failed
+$request.body#/successUrls/2 | https://clientdomain.com/medium
+$response.header.Location | https://example.org/subscription/1
+
+#### Callbackオブジェクトの例
+次の例では、ユーザー提供の `queryUrl` クエリ文字列パラメーターを使用して、コールバック URL を定義しています。 これは、コールバック オブジェクトを使用して WebHook の登録を有効にするサブスクリプション操作に対応する WebHook コールバックを記述する方法の例です。
+```yaml
+myCallback:
+  '{$request.query.queryUrl}':
+    post:
+      requestBody:
+        description: Callback payload
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/SomePayload'
+      responses:
+        '200':
+          description: callback successfully processed
+```
+次の例は、サーバーがハードコーディングされているコールバックを示していますが、クエリ文字列パラメータはリクエスト本文の `id` および `email` プロパティから入力されています。
+```yaml
+transactionCallback:
+  'http://notificationServer.com?transactionId={$request.body#/id}&email={$request.body#/email}':
+    post:
+      requestBody:
+        description: Callback payload
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/SomePayload'
+      responses:
+        '200':
+          description: callback successfully processed
+```
+
+### Exampleオブジェクト
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+summary | `string` | 例の簡単な説明。
+description | `string` | 例の長い説明。 [CommonMark構文](https://spec.commonmark.org/) が、リッチテキスト表現に使用される場合があります（MAY）。
+value | Any | 埋め込みリテラルの例。 `value` フィールドと `externalValue` フィールドは相互に排他的です。 JSON または YAML で自然に表現できないメディア タイプの例を表すには、文字列値を使用して例を含め、必要に応じてエスケープします。
+externalValue | `string` |リテラルの例を指す URI。 これにより、JSON または YAML ドキュメントに簡単に含めることができない例を参照する機能が提供されます。 `value` フィールドと `externalValue` フィールドは相互に排他的です。 [相対参照](#uriの相対参照) を解決するための規則を参照してください。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+いずれの場合も、値の例は、関連付けられた値の型スキーマと互換性があることが期待されます。 ツールの実装は、互換性を自動的に検証することを選択し、互換性がない場合は値の例を拒否する場合があります。
+
+#### Exampleオブジェクトの例
+リクエスト本文:
+```yaml
+requestBody:
+  content:
+    'application/json':
+      schema:
+        $ref: '#/components/schemas/Address'
+      examples: 
+        foo:
+          summary: A foo example
+          value: {"foo": "bar"}
+        bar:
+          summary: A bar example
+          value: {"bar": "baz"}
+    'application/xml':
+      examples: 
+        xmlExample:
+          summary: This is an example in XML
+          externalValue: 'https://example.org/examples/address-example.xml'
+    'text/plain':
+      examples:
+        textExample: 
+          summary: This is a text example
+          externalValue: 'https://foo.bar/examples/address-example.txt'
+```
+パラメータ:
+```yaml
+parameters:
+  - name: 'zipCode'
+    in: 'query'
+    schema:
+      type: 'string'
+      format: 'zip-code'
+    examples:
+      zip-example: 
+        $ref: '#/components/examples/zip-example'
+```
+レスポンス:
+```yaml
+responses:
+  '200':
+    description: your car appointment has been booked
+    content: 
+      application/json:
+        schema:
+          $ref: '#/components/schemas/SuccessResponse'
+        examples:
+          confirmation-success:
+            $ref: '#/components/examples/confirmation-success'
+```
+
+### Linkオブジェクト
+`Link オブジェクト` は、応答に対する設計時に可能なリンクを表します。
+リンクの存在は、呼び出し元がそれを正常に呼び出すことができることを保証するものではなく、応答と他の操作との間の既知の関係と貫くメカニズムを提供します。
+
+_動的_ リンク (つまり、応答ペイロード**内**で提供されるリンク) とは異なり、OAS リンクメカニズムでは、実行時の応答にリンク情報は必要ありません。
+
+リンクを計算し、それらを実行するための命令を提供するために、[実行時式](#実行時式) を使用して操作の値にアクセスし、リンクされた操作を呼び出すときにそれらをパラメーターとして使用します。
+
+#### 固定フィールド
+フィールド名 | 型 | setumei 
+---|:---:|---
+operationRef | `string` | OAS 操作への相対または絶対 URI 参照。 このフィールドは `operationId` フィールドとは相互に排他的であり、[Operationオブジェクト](#operationオブジェクト) を指している必要があります（MUST）。 相対 `operationRef` 値を使用して、OpenAPI 定義内の既存の [Operationオブジェクト](#operationオブジェクト) を見つけることができます（MAY）。 [相対参照](#uriの相対参照) を解決するための規則を参照してください。
+operationId  | `string` | 一意の `operationId` で定義された、_既存の_ 解決可能な OAS 操作の名前。 このフィールドは、`operationRef` フィールドと相互に排他的です。
+parameters   | Map[`string`, Any \| [{expression}](#実行時式)] | `operationId` で指定された、または `operationRef` で識別された操作に渡すパラメータを表すマップ。 キーは使用するパラメーター名ですが、値は、評価されてリンクされた操作に渡される定数または式にすることができます。 パラメータ名は、パラメータの場所 `[{in}.]{name}` を使用して、異なる場所で同じパラメータ名を使用する操作で修飾できます (例: path.id)。
+requestBody | Any \| [{expression}](#実行時式) | ターゲット操作を呼び出すときにリクエスト本文として使用するリテラル値または [{expression}](#実行時式)。
+description  | `string` | リンクの説明。 [CommonMark構文](https://spec.commonmark.org/) が、リッチテキスト表現に使用される場合があります（MAY）。
+server       | [Server Object](#serverObject) | ターゲット操作で使用される server オブジェクト。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+リンクされた操作は、`operationRef` または `operationId` のいずれかを使用して識別されなければなりません。
+`operationId` の場合、OAS ドキュメントのスコープ内で一意で解決されなければなりません。
+名前が競合する可能性があるため、外部参照を持つ OpenAPI ドキュメントには`operationRef` 構文が推奨されます。
+
+#### 例
+`$request.path.id` を使用してリンクされたオペレーションにリクエストパラメータを渡すリクエストオペレーションからリンクを計算します。
+```yaml
+paths:
+  /users/{id}:
+    parameters:
+    - name: id
+      in: path
+      required: true
+      description: the user identifier, as userId 
+      schema:
+        type: string
+    get:
+      responses:
+        '200':
+          description: the user being returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uuid: # the unique user id
+                    type: string
+                    format: uuid
+          links:
+            address:
+              # the target link operationId
+              operationId: getUserAddress
+              parameters:
+                # get the `id` field from the request path parameter named `id`
+                userId: $request.path.id
+  # the path item of the linked operation
+  /users/{userid}/address:
+    parameters:
+    - name: userid
+      in: path
+      required: true
+      description: the user identifier, as userId 
+      schema:
+        type: string
+    # linked operation
+    get:
+      operationId: getUserAddress
+      responses:
+        '200':
+          description: the user's address
+```
+実行時式が評価に失敗すると、パラメーター値はターゲット操作に渡されません。
+
+応答の本文の値を使用して、リンクされた操作を実行できます。
+```yaml
+links:
+  address:
+    operationId: getUserAddressByUUID
+    parameters:
+      # get the `uuid` field from the `uuid` field in the response body
+      userUuid: $response.body#/uuid
+```
+クライアントは、自分の裁量ですべてのリンクをたどります。
+パーミッションも、そのリンクへの呼び出しを成功させる機能も、関係が存在するだけでは保証されません。
+
+#### OperationRefの例
+`operationId` への参照は可能でない（MAY NOT）場合があるため (`operationId` は [Operationオブジェクト](#operationオブジェクト) のオプション フィールドです)、相対 `operationRef` を介して参照することもできます（MAY）。
+```yaml
+links:
+  UserRepositories:
+    # returns array of '#/components/schemas/repository'
+    operationRef: '#/paths/~12.0~1repositories~1{username}/get'
+    parameters:
+      username: $response.body#/username
+```
+または、絶対的な `operationRef`:
+```yaml
+links:
+  UserRepositories:
+    # returns array of '#/components/schemas/repository'
+    operationRef: 'https://na2.gigantic-server.com/#/paths/~12.0~1repositories~1{username}/get'
+    parameters:
+      username: $response.body#/username
+```
+`operationRef` の使用では、JSON 参照を使用するときに _スラッシュのエスケープ_ が必要であることに注意してください。
+
+### 実行時式
+実行時式を使用すると、実際の API 呼び出しの HTTP メッセージ内でのみ使用できる情報に基づいて値を定義できます。
+このメカニズムは、[Linkオブジェクト](#linkオブジェクト) と [Callbackオブジェクト](#callbackオブジェクト) で使用されます。
+
+実行時式は、次の [ABNF](https://tools.ietf.org/html/rfc5234) 構文によって定義されます。
+```abnf
+      expression = ( "$url" / "$method" / "$statusCode" / "$request." source / "$response." source )
+      source = ( header-reference / query-reference / path-reference / body-reference )
+      header-reference = "header." token
+      query-reference = "query." name  
+      path-reference = "path." name
+      body-reference = "body" ["#" json-pointer ]
+      json-pointer    = *( "/" reference-token )
+      reference-token = *( unescaped / escaped )
+      unescaped       = %x00-2E / %x30-7D / %x7F-10FFFF
+         ; %x2F ('/') and %x7E ('~') are excluded from 'unescaped'
+      escaped         = "~" ( "0" / "1" )
+        ; representing '~' and '/', respectively
+      name = *( CHAR )
+      token = 1*tchar
+      tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
+        "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
+```
+ここで、`json-pointer` は [RFC6901](https://tools.ietf.org/html/rfc6901) から、`char` は [RFC7159](https://tools.ietf.org/html/rfc7159#section-7) から、`token` は [RFC7230](https://tools.ietf.org/html/rfc7230#section-3.2.6) から拝借します。
+
+`name` 識別子は大文字と小文字を区別しますが、`token` は区別しません。
+
+次の表は、実行時式の例と値での使用例を示しています。
+
+#### 例
+元となるもの | 式の例 | 注記
+---|:---|:---|
+HTTP Method            | `$method`         | `$method` の許容値は、HTTP 操作の値になります。
+Requested media type | `$request.header.accept`        |  
+Request parameter      | `$request.path.id`        | 要求パラメーターは、親操作の「parameters」セクションで宣言する必要があります（MUST）。そうしないと、評価できません。 これには、リクエスト ヘッダーが含まれます。
+Request body property   | `$request.body#/user/uuid`   | ペイロードを受け入れる操作では、`requestBody` の一部または本文全体を参照できます。
+Request URL            | `$url`            |  
+Response value         | `$response.body#/status`       |  ペイロードを返す操作では、応答本文の一部または本文全体を参照できます。
+Response header        | `$response.header.Server` |  単一のヘッダー値のみが利用可能です
+
+ランタイム式は、参照される値の型を保持します。
+`{}` 中括弧で式を囲むことにより、式を文字列値に埋め込むことができます。
+
+### Headerオブジェクト
+Header オブジェクトは、[Parameterオブジェクト](#parameterオブジェクト) の構造に従いますが、次の違いがあります。
+
+1. `name` は指定してはなりません（MUST NOT）。対応する `headers` マップで指定されます。
+1. `in` を指定してはなりません（MUST NOT）。それは暗黙的に `header` にあります。
+1. ロケーションの影響を受けるすべての特性は、`header` のロケーションに適用できる必要があります （MUST）([`style`](#parameterStyle) など)。
+
+#### Headerオブジェクトの例
+`integer` 型の単純なヘッダー:
+```json
+{
+  "description": "The number of allowed requests in the current period",
+  "schema": {
+    "type": "integer"
+  }
+}
+```
+```yaml
+description: The number of allowed requests in the current period
+schema:
+  type: integer
+```
+
+### Tagオブジェクト
+[Operationオブジェクト](#operationオブジェクト) で使用される単一のタグにメタデータを追加します。
+オペレーションオブジェクトインスタンスで定義されたタグごとに Tag オブジェクトを持つことは必須ではありません。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+name | `string` | **REQUIRED**. タグの名前。
+description | `string` | タグの説明。 [CommonMark構文](https://spec.commonmark.org/) が、リッチテキスト表現に使用される場合があります（MAY）。
+externalDocs | [External Documentation](#external-documentationオブジェクト) | このタグの追加の外部ドキュメント。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Tagオブジェクトの例
+```json
+{
+	"name": "pet",
+	"description": "Pets operations"
+}
+```
+```yaml
+name: pet
+description: Pets operations
+```
+
+### Referenceオブジェクト
+内部および外部で OpenAPI ドキュメント内の他のコンポーネントを参照できるようにする単純なオブジェクト。
+
+`$ref` 文字列値には、参照されている値の場所を識別する URI [RFC3986](https://tools.ietf.org/html/rfc3986) が含まれています。
+
+[相対参照](#uriの相対参照) を解決するための規則を参照してください。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+$ref | `string` | **REQUIRED**. 参照識別子。 これは URI の形式でなければなりません（MUST）。
+summary | `string` | デフォルトでは、参照されたコンポーネントの要約をオーバーライドする必要がある（SHOULD）短い要約。 参照された object-type が　`summary` フィールドを許可しない場合、このフィールドは効果がありません。
+description | `string` | デフォルトで、参照されたコンポーネントの記述をオーバーライドする必要がある（MUST）記述。 [CommonMark構文](https://spec.commonmark.org/) が、リッチテキスト表現に使用される場合があります（MAY）。 参照された object-type が `description` フィールドを許可しない場合、このフィールドは効果がありません。
+
+このオブジェクトは追加のプロパティで拡張できず、追加されたプロパティは無視されるものとします。
+
+追加のプロパティに対するこの制限は、`$ref` キーワードを含む参照オブジェクトと [`Schemaオブジェクト`](#schemaオブジェクト) の違いであることに注意してください。
+
+#### Referenceオブジェクトの例
+```json
+{
+	"$ref": "#/components/schemas/Pet"
+}
+```
+```yaml
+$ref: '#/components/schemas/Pet'
+```
+
+#### 相対スキーマドキュメントの例
+```json
+{
+  "$ref": "Pet.json"
+}
+```
+```yaml
+$ref: Pet.yaml
+```
+
+#### スキーマが埋め込まれた相対ドキュメントの例
+```json
+{
+  "$ref": "definitions.json#/Pet"
+}
+```
+
+```yaml
+$ref: definitions.yaml#/Pet
+```
+
+### Schemaオブジェクト
+スキーマ オブジェクトを使用すると、入力および出力のデータ型を定義できます。
+これらの型は、オブジェクトだけでなく、プリミティブや配列でもかまいません。 このオブジェクトは、[JSON Schema Specification Draft 2020-12](https://tools.ietf.org/html/draft-bhutton-json-schema-00) のスーパーセットです。
+
+プロパティの詳細については、[JSON スキーマ コア](https://tools.ietf.org/html/draft-bhutton-json-schema-00) および [JSON スキーマ検証](https://tools.ietf.org/html/draft-bhutton-json-schema-validation-00) を参照してください。
+
+特に明記しない限り、プロパティ定義は JSON スキーマの定義に従い、セマンティクスを追加しません。
+JSON Schema は動作がアプリケーションによって定義されることを示しますが (例: 注釈)、OAS はセマンティクスの定義を OpenAPI ドキュメントを使用するアプリケーションに委ねます。
+
+#### プロパティ
+OpenAPI スキーマオブジェクト[方言](https://tools.ietf.org/html/draft-bhutton-json-schema-00#section-4.3.3) は、JSON スキーマ ドラフト 2020-12 [汎用メタスキーマ](https://tools.ietf.org/html/draft-bhutton-json-schema-00#section-8) で指定されている語彙に加えて、[OAS 基本語彙](#baseVocabulary) を必要とするものとして定義されています。 、
+
+このバージョンの仕様の OpenAPI スキーマ オブジェクト方言は、URI によって識別されます。`https://spec.openapis.org/oas/3.1/dialect/base` ("OAS dialect schema id")
+
+次のプロパティは JSON スキーマ仕様から取得されますが、その定義は OAS によって拡張されています。
+
+- description - [CommonMark構文](https://spec.commonmark.org/) が、リッチテキスト表現に使用される場合があります（MAY）。
+- format - 詳細については、[データ型の形式](##データ型) を参照してください。 OAS は、JSON スキーマの定義済みフォーマットに依存していますが、追加の定義済みフォーマットをいくつか提供しています。
+
+OAS 方言を構成する JSON スキーマプロパティに加えて、スキーマオブジェクトは、他の語彙からのキーワード、または完全に任意のプロパティをサポートします。
+
+OpenAPI 仕様の基本語彙は、次のキーワードで構成されています。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+discriminator | [Discriminator](#discriminatorオブジェクト) | ポリモーフィズムのサポートを追加します。 識別子は、ペイロードの説明を満たす可能性のある他のスキーマを区別するために使用されるオブジェクト名です。 詳細については、[構成と継承](#構成と継承(ポリモーフィズム))を参照してください。
+xml | [XML](#xmlオブジェクト) | これは、プロパティスキーマでのみ使用できます（MAY）。 ルートスキーマには影響しません。 このプロパティの XML 表現を記述する追加のメタデータを追加します。
+externalDocs | [External Documentation](#external-documentationオブジェクト) | このスキーマに関する追加の外部ドキュメント。
+example | Any |このスキーマのインスタンスの例を含む自由形式のプロパティ。 JSON または YAML で自然に表現できない例を表すために、文字列値を使用して、必要に応じてエスケープして例を含めることができます。<br><br>**Deprecated:** `example` プロパティは廃止され、JSON スキーマの `examples` キーワードが採用されました。 `example` の使用は推奨されておらず、この仕様の以降のバージョンでは削除される可能性があります。
+
+このオブジェクトは [仕様拡張](#仕様拡張) で拡張できますが、前述のように、追加のプロパティはこのオブジェクト内の `x-` 接頭辞を省略できます。
+
+##### 構成と継承(ポリモーフィズム)
+OpenAPI 仕様では、JSON スキーマの `allOf` プロパティを使用してモデル定義を結合および拡張でき、実質的にモデル構成を提供します。
+`allOf` は、*独立して* 検証されるオブジェクト定義の配列を取りますが、一緒に 1 つのオブジェクトを構成します。
+
+コンポジションはモデルの拡張性を提供しますが、モデル間の階層を意味するものではありません。
+ポリモーフィズムをサポートするために、OpenAPI 仕様では `discriminator` フィールドが追加されています。
+`discriminator` を使用すると、モデルの構造を検証するスキーマ定義を決定するプロパティの名前になります。
+そのため、「discriminator」フィールドは必須フィールドでなければなりません。
+継承インスタンスの識別子の値を定義するには、2 つの方法があります。
+- スキーマ名を使用します。
+- プロパティを新しい値でオーバーライドして、スキーマ名をオーバーライドします。 新しい値が存在する場合、これはスキーマ名よりも優先されます。
+そのため、指定された ID を持たないインラインスキーマ定義は、ポリモーフィズムでは使用 *できません*。
+
+##### XML モデリング
+xml プロパティを使用すると、JSON 定義を XML に変換するときに追加の定義を行うことができます。
+[XMLオブジェクト](#xmlオブジェクト) には、使用可能なオプションに関する追加情報が含まれています。
+
+##### スキーマ方言の指定
+JSON スキーマ コア、JSON スキーマ検証、OpenAPI スキーマ方言、またはカスタム メタスキーマなど、特定のリソースを処理する方言またはメタスキーマをツールが判断できることが重要です。
+
+`$schema` キーワードは、任意のルート スキーマ オブジェクトに存在する場合があり（MAY）、存在する場合は、スキーマを処理するときにどの方言を使用するかを決定するために使用する必要があります（MUST）。 これにより、デフォルトのドラフト 2020-12 サポート以外の JSON スキーマの他のドラフトに準拠するスキーマ オブジェクトを使用できます。 ツールはOAS dialect schema id をサポートしなければなりませんが (MUST)、`$schema` の追加の値をサポートしてもよいです (MAY)。
+
+OAS ドキュメント内に含まれるすべてのスキーマオブジェクトに対して異なるデフォルト `$schema` 値の使用を許可するには、`jsonSchemaDialect` 値を OpenAPI オブジェクト内で設定できます。 このデフォルトが設定されていない場合、OAS 方言スキーマ ID をこれらのスキーマオブジェクトに使用する必要があります（MUST）。 スキーマ オブジェクト内の `$schema` の値は、常にデフォルトをオーバーライドします。
+
+スキーマオブジェクトが OAS ドキュメントではない外部リソース (例: 裸の JSON スキーマリソース) から参照される場合、そのリソース内のスキーマの `$schema` キーワードの値は [JSON スキーマ ルール](https://tools.ietf.org/html/draft-bhutton-json-schema-00#section-8.1.1) に従わなければなりません (MUST)。
+
+#### Schemaオブジェクトの例
+##### 基本的なサンプル
+```json
+{
+  "type": "string",
+  "format": "email"
+}
+```
+```yaml
+type: string
+format: email
+```
+
+##### 単純なモデル
+```json
+{
+  "type": "object",
+  "required": [
+    "name"
+  ],
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "address": {
+      "$ref": "#/components/schemas/Address"
+    },
+    "age": {
+      "type": "integer",
+      "format": "int32",
+      "minimum": 0
+    }
+  }
+}
+```
+```yaml
+type: object
+required:
+- name
+properties:
+  name:
+    type: string
+  address:
+    $ref: '#/components/schemas/Address'
+  age:
+    type: integer
+    format: int32
+    minimum: 0
+```
+
+##### マップ/辞書プロパティを持つモデル
+単純な文字列から文字列へのマッピングの場合:
+```json
+{
+  "type": "object",
+  "additionalProperties": {
+    "type": "string"
+  }
+}
+```
+```yaml
+type: object
+additionalProperties:
+  type: string
+```
+文字列からモデルへのマッピングの場合:
+```json
+{
+  "type": "object",
+  "additionalProperties": {
+    "$ref": "#/components/schemas/ComplexModel"
+  }
+}
+```
+```yaml
+type: object
+additionalProperties:
+  $ref: '#/components/schemas/ComplexModel'
+```
+
+##### モデルの例
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer",
+      "format": "int64"
+    },
+    "name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "example": {
+    "name": "Puma",
+    "id": 1
+  }
+}
+```
+```yaml
+type: object
+properties:
+  id:
+    type: integer
+    format: int64
+  name:
+    type: string
+required:
+- name
+example:
+  name: Puma
+  id: 1
+```
+
+##### コンポジションのあるモデル
+```json
+{
+  "components": {
+    "schemas": {
+      "ErrorModel": {
+        "type": "object",
+        "required": [
+          "message",
+          "code"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 600
+          }
+        }
+      },
+      "ExtendedErrorModel": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ErrorModel"
+          },
+          {
+            "type": "object",
+            "required": [
+              "rootCause"
+            ],
+            "properties": {
+              "rootCause": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+```
+```yaml
+components:
+  schemas:
+    ErrorModel:
+      type: object
+      required:
+      - message
+      - code
+      properties:
+        message:
+          type: string
+        code:
+          type: integer
+          minimum: 100
+          maximum: 600
+    ExtendedErrorModel:
+      allOf:
+      - $ref: '#/components/schemas/ErrorModel'
+      - type: object
+        required:
+        - rootCause
+        properties:
+          rootCause:
+            type: string
+```
+
+##### ポリモーフィズムをサポートするモデル
+```json
+{
+  "components": {
+    "schemas": {
+      "Pet": {
+        "type": "object",
+        "discriminator": {
+          "propertyName": "petType"
+        },
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "petType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "petType"
+        ]
+      },
+      "Cat": {
+        "description": "A representation of a cat. Note that `Cat` will be used as the discriminator value.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Pet"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "huntingSkill": {
+                "type": "string",
+                "description": "The measured skill for hunting",
+                "default": "lazy",
+                "enum": [
+                  "clueless",
+                  "lazy",
+                  "adventurous",
+                  "aggressive"
+                ]
+              }
+            },
+            "required": [
+              "huntingSkill"
+            ]
+          }
+        ]
+      },
+      "Dog": {
+        "description": "A representation of a dog. Note that `Dog` will be used as the discriminator value.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Pet"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "packSize": {
+                "type": "integer",
+                "format": "int32",
+                "description": "the size of the pack the dog is from",
+                "default": 0,
+                "minimum": 0
+              }
+            },
+            "required": [
+              "packSize"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
+```
+```yaml
+components:
+  schemas:
+    Pet:
+      type: object
+      discriminator:
+        propertyName: petType
+      properties:
+        name:
+          type: string
+        petType:
+          type: string
+      required:
+      - name
+      - petType
+    Cat:  ## "Cat" will be used as the discriminator value
+      description: A representation of a cat
+      allOf:
+      - $ref: '#/components/schemas/Pet'
+      - type: object
+        properties:
+          huntingSkill:
+            type: string
+            description: The measured skill for hunting
+            enum:
+            - clueless
+            - lazy
+            - adventurous
+            - aggressive
+        required:
+        - huntingSkill
+    Dog:  ## "Dog" will be used as the discriminator value
+      description: A representation of a dog
+      allOf:
+      - $ref: '#/components/schemas/Pet'
+      - type: object
+        properties:
+          packSize:
+            type: integer
+            format: int32
+            description: the size of the pack the dog is from
+            default: 0
+            minimum: 0
+        required:
+        - packSize
+```
+
+### Discriminatorオブジェクト
+リクエスト ボディまたはレスポンス ペイロードが多数の異なるスキーマの 1 つである可能性がある場合、`
+discriminator` オブジェクトを使用してシリアライゼーション、デシリアライゼーション、および検証を支援できます。 ディスクリミネーターはスキーマ内の特定のオブジェクトであり、関連する値に基づいて代替スキーマのドキュメントを消費者に通知するために使用されます。
+
+ディスクリミネーターを使用する場合、_インライン_ スキーマは考慮されません。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+propertyName | `string` | **REQUIRED**. 識別子の値を保持するペイロード内のプロパティの名前。
+mapping | Map[`string`, `string`] |ペイロード値とスキーマ名または参照の間のマッピングを保持するオブジェクト。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+識別子オブジェクトは、複合キーワード `oneOf`、`anyOf`、`allOf` のいずれかを使用する場合にのみ有効です。
+
+OAS 3.0 では、応答ペイロードは、いくつかの数の型のうち、正確に 1 つとして記述される場合があります。
+```yaml
+MyResponseType:
+  oneOf:
+  - $ref: '#/components/schemas/Cat'
+  - $ref: '#/components/schemas/Dog'
+  - $ref: '#/components/schemas/Lizard'
+```
+これは、検証により、ペイロードが `Cat`、`Dog`、または `Lizard` で記述されたスキーマの 1 つと正確に一致する必要がある（_MUST_）ことを意味します。 この場合、ディスクリミネータは、スキーマの複雑さによっては、コストのかかる操作になる可能性がある一致するスキーマの検証と選択を短縮するための「ヒント」として機能する場合があります（MAY）。 次に、使用するスキーマを示すフィールドを正確に記述できます。
+```yaml
+MyResponseType:
+  oneOf:
+  - $ref: '#/components/schemas/Cat'
+  - $ref: '#/components/schemas/Dog'
+  - $ref: '#/components/schemas/Lizard'
+  discriminator:
+    propertyName: petType
+```
+ここで期待されているのは、'petType' という名前のプロパティが応答ペイロードに存在する必要があり（_MUST_）、その値は OAS ドキュメントで定義されているスキーマの名前に対応することです。 したがって、応答ペイロードは:
+```json
+{
+  "id": 12345,
+  "petType": "Cat"
+}
+```
+`Cat` スキーマがこのペイロードと組み合わせて使用されることを示します。
+
+識別子フィールドの値がスキーマ名と一致しないか、暗黙のマッピングが不可能なシナリオでは、オプションの`mapping` 定義を使用できます:
+```yaml
+MyResponseType:
+  oneOf:
+  - $ref: '#/components/schemas/Cat'
+  - $ref: '#/components/schemas/Dog'
+  - $ref: '#/components/schemas/Lizard'
+  - $ref: 'https://gigantic-server.com/schemas/Monster/schema.json'
+  discriminator:
+    propertyName: petType
+    mapping:
+      dog: '#/components/schemas/Dog'
+      monster: 'https://gigantic-server.com/schemas/Monster/schema.json'
+```
+ここで、`dog` の識別子の _値_ は、`Dog` のデフォルト (暗黙の) 値ではなく、スキーマ `#/components/schemas/Dog` にマップされます。 識別子の _値_ が暗黙的または明示的なマッピングと一致しない場合、スキーマを決定できず、検証は失敗する必要があります（SHOULD）。 マッピングキーは文字列値である必要がありますが（MUST）、ツールは比較のために応答値を文字列に変換する場合があります（MAY）。
+
+`anyOf` コンストラクトと組み合わせて使用すると、ディスクリミネーターを使用した場合に、複数のスキーマが単一のペイロードを満たす可能性があるというあいまいさを回避できます。
+
+`oneOf` と `anyOf` の両方のユースケースで、すべての可能なスキーマを明示的にリストする必要があります（MUST）。 冗長性を避けるために、ディスクリミネーターを親スキーマ定義に追加することができ、 `allOf` 構造で親スキーマを構成するすべてのスキーマを代替スキーマとして使用できます（MAY）。
+
+例えば
+```yaml
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+      - petType
+      properties:
+        petType:
+          type: string
+      discriminator:
+        propertyName: petType
+        mapping:
+          dog: Dog
+    Cat:
+      allOf:
+      - $ref: '#/components/schemas/Pet'
+      - type: object
+        # all other properties specific to a `Cat`
+        properties:
+          name:
+            type: string
+    Dog:
+      allOf:
+      - $ref: '#/components/schemas/Pet'
+      - type: object
+        # all other properties specific to a `Dog`
+        properties:
+          bark:
+            type: string
+    Lizard:
+      allOf:
+      - $ref: '#/components/schemas/Pet'
+      - type: object
+        # all other properties specific to a `Lizard`
+        properties:
+          lovesRocks:
+            type: boolean
+```
+で、次のようなペイロードだと
+```json
+{
+  "petType": "Cat",
+  "name": "misty"
+}
+```
+`Cat` スキーマが使用されていることを示します。 同様に、このスキーマは
+```json
+{
+  "petType": "dog",
+  "bark": "soft"
+}
+```
+`mapping` 要素の定義により、`Dog` にマップされます。
+
+### XMLオブジェクト
+より微調整された XML モデル定義を可能にするメタデータ オブジェクト。
+
+配列を使用する場合、XML 要素名は推論*されません* (単数形/複数形の場合)。`name` プロパティを使用してその情報を追加する必要があります（SHOULD）。
+予想される動作については、例を参照してください。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+name | `string` | 記述されたスキーマ プロパティに使用される要素/属性の名前を置き換えます。 `items` 内で定義すると、リスト内の個々の XML 要素の名前に影響します。 `type` が `array` である (`items` の外で) と一緒に定義されると、ラッピング要素に影響し、`wrapped` が `true` の場合にのみ影響します。`wrapped` が `false` の場合は無視されます。
+namespace | `string` | 名前空間定義の URI。 これは、絶対 URI の形式でなければなりません。
+prefix | `string` | [name](#xmlName) に使用するプレフィックス。
+attribute | `boolean` | プロパティ定義が要素ではなく属性に変換されるかどうかを宣言します。 デフォルト値は `false` です。
+wrapped | `boolean` | 配列定義にのみ使用できます（MAY）。 配列がラップされているか (たとえば、`<books><book/><book/></books>`)、ラップされていないか (`<book/><book/>`) を示します。 デフォルト値は `false` です。 この定義は、`type` が `array` である (`items` の外で) と一緒に定義された場合にのみ有効です。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+
+#### XMLオブジェクトの例
+XML オブジェクト定義の例は、[Schemaオブジェクト](#schemaオブジェクト) のプロパティ定義内に、その XML 表現のサンプルと共に含まれています。
+
+##### XML要素なし
+基本的な文字列プロパティ:
+```json
+{
+    "animals": {
+        "type": "string"
+    }
+}
+```
+```yaml
+animals:
+  type: string
+```
+```xml
+<animals>...</animals>
+```
+基本的な文字列配列プロパティ (`wrapped` はデフォルトで `false` です):
+```json
+{
+    "animals": {
+        "type": "array",
+        "items": {
+            "type": "string"
+        }
+    }
+}
+```
+```yaml
+animals:
+  type: array
+  items:
+    type: string
+```
+```xml
+<animals>...</animals>
+<animals>...</animals>
+<animals>...</animals>
+```
+
+##### XML 名前の置換
+```json
+{
+  "animals": {
+    "type": "string",
+    "xml": {
+      "name": "animal"
+    }
+  }
+}
+```
+```yaml
+animals:
+  type: string
+  xml:
+    name: animal
+```
+```xml
+<animal>...</animal>
+```
+
+##### XML 属性、プレフィックス、および名前空間
+この例では、完全なモデル定義が示されています。
+```json
+{
+  "Person": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "integer",
+        "format": "int32",
+        "xml": {
+          "attribute": true
+        }
+      },
+      "name": {
+        "type": "string",
+        "xml": {
+          "namespace": "https://example.com/schema/sample",
+          "prefix": "sample"
+        }
+      }
+    }
+  }
+}
+```
+```yaml
+Person:
+  type: object
+  properties:
+    id:
+      type: integer
+      format: int32
+      xml:
+        attribute: true
+    name:
+      type: string
+      xml:
+        namespace: https://example.com/schema/sample
+        prefix: sample
+```
+```xml
+<Person id="123">
+    <sample:name xmlns:sample="https://example.com/schema/sample">example</sample:name>
+</Person>
+```
+
+##### XML 配列
+要素名の変更:
+```json
+{
+  "animals": {
+    "type": "array",
+    "items": {
+      "type": "string",
+      "xml": {
+        "name": "animal"
+      }
+    }
+  }
+}
+```
+```yaml
+animals:
+  type: array
+  items:
+    type: string
+    xml:
+      name: animal
+```
+```xml
+<animal>value</animal>
+<animal>value</animal>
+```
+外部の `name` プロパティは XML には影響しません。
+```json
+{
+  "animals": {
+    "type": "array",
+    "items": {
+      "type": "string",
+      "xml": {
+        "name": "animal"
+      }
+    },
+    "xml": {
+      "name": "aliens"
+    }
+  }
+}
+```
+```yaml
+animals:
+  type: array
+  items:
+    type: string
+    xml:
+      name: animal
+  xml:
+    name: aliens
+```
+```xml
+<animal>value</animal>
+<animal>value</animal>
+```
+配列がラップされている場合でも、名前が明示的に定義されていない場合は、同じ名前が内部と外部の両方で使用されます。
+```json
+{
+  "animals": {
+    "type": "array",
+    "items": {
+      "type": "string"
+    },
+    "xml": {
+      "wrapped": true
+    }
+  }
+}
+```
+```yaml
+animals:
+  type: array
+  items:
+    type: string
+  xml:
+    wrapped: true
+```
+```xml
+<animals>
+  <animals>value</animals>
+  <animals>value</animals>
+</animals>
+```
+上記の例の名前付けの問題を解決するには、次の定義を使用できます。
+```json
+{
+  "animals": {
+    "type": "array",
+    "items": {
+      "type": "string",
+      "xml": {
+        "name": "animal"
+      }
+    },
+    "xml": {
+      "wrapped": true
+    }
+  }
+}
+```
+```yaml
+animals:
+  type: array
+  items:
+    type: string
+    xml:
+      name: animal
+  xml:
+    wrapped: true
+```
+```xml
+<animals>
+  <animal>value</animal>
+  <animal>value</animal>
+</animals>
+```
+内部名と外部名の両方に影響する場合:
+```json
+{
+  "animals": {
+    "type": "array",
+    "items": {
+      "type": "string",
+      "xml": {
+        "name": "animal"
+      }
+    },
+    "xml": {
+      "name": "aliens",
+      "wrapped": true
+    }
+  }
+}
+```
+```yaml
+animals:
+  type: array
+  items:
+    type: string
+    xml:
+      name: animal
+  xml:
+    name: aliens
+    wrapped: true
+```
+```xml
+<aliens>
+  <animal>value</animal>
+  <animal>value</animal>
+</aliens>
+```
+外部要素を変更し、内部要素を変更しない場合:
+```json
+{
+  "animals": {
+    "type": "array",
+    "items": {
+      "type": "string"
+    },
+    "xml": {
+      "name": "aliens",
+      "wrapped": true
+    }
+  }
+}
+```
+```yaml
+animals:
+  type: array
+  items:
+    type: string
+  xml:
+    name: aliens
+    wrapped: true
+```
+```xml
+<aliens>
+  <aliens>value</aliens>
+  <aliens>value</aliens>
+</aliens>
+```
+
+### Security Schemeオブジェクト
+操作で使用できるセキュリティスキームを定義します。
+
+サポートされているスキームは、HTTP 認証、API キー (ヘッダー、Cookie パラメーター、またはクエリ パラメーターとして)、相互 TLS (クライアント証明書の使用)、 [RFC6749](https://tools.ietf.org/html/rfc6749) および [OpenID Connect Discovery](https://tools.ietf.org/html/draft-ietf-oauth-discovery-06) で定義されている OAuth2 の一般的なフロー (暗黙、パスワード、クライアント資格情報、および認証コード) です。
+2020 年現在、暗黙的なフローは [OAuth 2.0 Security Best Current Practice](https://tools.ietf.org/html/draft-ietf-oauth-security-topics) によって廃止されようとしていることにご注意ください。 ほとんどのユース ケースに推奨されるのは、PKCE を使用した認証コード付与フローです。
+
+#### 固定フィールド
+フィールド名 | 型 | 適用先 | 説明
+---|:---:|---|---
+type | `string` | Any | **REQUIRED**. セキュリティ スキームのタイプ。 有効な値は、`"apiKey"`, `"http"`, `"mutualTLS"`, `"oauth2"`, `"openIdConnect"` です。
+description | `string` | Any | セキュリティ スキームの説明。 [CommonMark構文](https://spec.commonmark.org/) が、リッチテキスト表現に使用される場合があります（MAY）。
+name | `string` | `apiKey` | **REQUIRED**. 使用するヘッダー、クエリ、または Cookie パラメータの名前。
+in | `string` | `apiKey` | **REQUIRED**. API キーの場所。 有効な値は、`"query"`、`"header"` または `"cookie"` です。
+scheme | `string` | `http` | **REQUIRED**. [RFC7235 で定義されている認証ヘッダー](https://tools.ietf.org/html/rfc7235#section-5.1) で使用される HTTP 認証スキームの名前。 使用される値は、[IANA 認証スキーム レジストリ](https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml) に登録する必要があります（SHOULD）。
+bearerFormat | `string` | `http` (`"bearer"`) | Bearer トークンがどのようにフォーマットされているかを識別するためのクライアントへのヒント。 Bearer トークンは通常、承認サーバーによって生成されるため、この情報は主に文書化を目的としています。
+flows | [OAuth Flows Object](#oauthFlowsObject) | `oauth2` | **REQUIRED**. サポートされているフロー型の構成情報を含むオブジェクト。
+openIdConnectUrl | `string` | `openIdConnect` | **REQUIRED**.OAuth2 構成値を検出するための OpenId Connect URL。 これは URL の形式でなければなりません。 OpenID Connect 標準では、TLS を使用する必要があります。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### Security Schemeオブジェクトの例
+##### Basic認証の例
+```json
+{
+  "type": "http",
+  "scheme": "basic"
+}
+```
+```yaml
+type: http
+scheme: basic
+```
+
+##### API Keyの例
+```json
+{
+  "type": "apiKey",
+  "name": "api_key",
+  "in": "header"
+}
+```
+```yaml
+type: apiKey
+name: api_key
+in: header
+```
+
+##### JWT Bearerの例
+```json
+{
+  "type": "http",
+  "scheme": "bearer",
+  "bearerFormat": "JWT",
+}
+```
+```yaml
+type: http
+scheme: bearer
+bearerFormat: JWT
+```
+##### 暗黙的なOAuth2の例
+```json
+{
+  "type": "oauth2",
+  "flows": {
+    "implicit": {
+      "authorizationUrl": "https://example.com/api/oauth/dialog",
+      "scopes": {
+        "write:pets": "modify pets in your account",
+        "read:pets": "read your pets"
+      }
+    }
+  }
+}
+```
+```yaml
+type: oauth2
+flows: 
+  implicit:
+    authorizationUrl: https://example.com/api/oauth/dialog
+    scopes:
+      write:pets: modify pets in your account
+      read:pets: read your pets
+```
+
+### OAuth Flowsオブジェクト
+サポートされている OAuth フローの構成を許可します。
+
+#### 固定フィールド
+フィールド名 | 型 | 説明
+---|:---:|---
+implicit| [OAuth Flow](#oauth-flowオブジェクト) | OAuth Implicit フローの構成
+password| [OAuth Flow](#oauth-flowオブジェクト) | OAuth リソース所有者パスワード フローの構成
+clientCredentials| [OAuth Flow](#oauth-flowオブジェクト) | OAuth クライアント資格情報フローの構成。 以前は OpenAPI 2.0 で `application` と呼ばれていたもの。
+authorizationCode| [OAuth Flow](#oauth-flowオブジェクト) | OAuth 認証コードフローの構成。 以前は OpenAPI 2.0 で `accessCode` と呼ばれていたもの。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+### OAuth Flowオブジェクト
+サポートされている OAuth フローの構成の詳細
+
+#### 固定フィールド
+フィールド名 | 型 | 適用先 | 説明
+---|:---:|---|---
+authorizationUrl | `string` | `oauth2` (`"implicit"`, `"authorizationCode"`) | **REQUIRED**. このフローに使用される承認 URL。 これは URL の形式でなければなりません。 OAuth2 標準では、TLS を使用する必要があります。
+tokenUrl | `string` | `oauth2` (`"password"`, `"clientCredentials"`, `"authorizationCode"`) | **REQUIRED**. このフローに使用されるトークン URL。 これは URL の形式でなければなりません。 OAuth2 標準では、TLS を使用する必要があります。
+refreshUrl | `string` | `oauth2` | リフレッシュ トークンの取得に使用する URL。 これは URL の形式でなければなりません。 OAuth2 標準では、TLS を使用する必要があります。
+scopes | Map[`string`, `string`] | `oauth2` | **REQUIRED**. OAuth2 セキュリティ スキームで使用可能なスコープ。 スコープ名とその簡単な説明の間のマップ。 マップは空である場合があります（MAY）。
+
+このオブジェクトは、[仕様拡張](#仕様拡張) で拡張できます（MAY）。
+
+#### OAuth Flowオブジェクトの例
+```JSON
+{
+  "type": "oauth2",
+  "flows": {
+    "implicit": {
+      "authorizationUrl": "https://example.com/api/oauth/dialog",
+      "scopes": {
+        "write:pets": "modify pets in your account",
+        "read:pets": "read your pets"
+      }
+    },
+    "authorizationCode": {
+      "authorizationUrl": "https://example.com/api/oauth/dialog",
+      "tokenUrl": "https://example.com/api/oauth/token",
+      "scopes": {
+        "write:pets": "modify pets in your account",
+        "read:pets": "read your pets"
+      }
+    }
+  }
+}
+```
+```yaml
+type: oauth2
+flows: 
+  implicit:
+    authorizationUrl: https://example.com/api/oauth/dialog
+    scopes:
+      write:pets: modify pets in your account
+      read:pets: read your pets
+  authorizationCode:
+    authorizationUrl: https://example.com/api/oauth/dialog
+    tokenUrl: https://example.com/api/oauth/token
+    scopes:
+      write:pets: modify pets in your account
+      read:pets: read your pets 
+```
+
+### Security Requirementオブジェクト
+この操作を実行するために必要なセキュリティスキームを一覧表示します。
+各プロパティに使用される名前は、[Componentsオブジェクト](#componentsオブジェクト) の下の Security Schemesで宣言されたセキュリティスキームに対応している必要があります。
+
+複数のスキームを含むセキュリティ要件オブジェクトでは、リクエストが承認されるためにすべてのスキームが満たされている必要があります（MUST）。
+これにより、セキュリティ情報を伝達するために複数のクエリ パラメーターまたは HTTP ヘッダーが必要なシナリオをサポートできます。
+
+[OpenAPIオブジェクト](#openapiオブジェクト) または [Operationオブジェクト](#operationオブジェクト) でセキュリティ要件オブジェクトのリストが定義されている場合、要求を承認するには、リスト内のセキュリティ要件オブジェクトの 1 つだけを満たす必要があります。
+
+#### パターン化されたフィールド
+フィールドのパターン | 型 | 説明
+---|:---:|---
+{name} | [`string`] | 各名前は、[Componentsオブジェクト](#componentsオブジェクト) の下の Security Schemes( で宣言されているセキュリティスキームに対応している必要があります（MUST）。 セキュリティスキームが `oauth2` または `openIdConnect` タイプの場合、値は実行に必要なスコープ名のリストであり、承認に指定されたスコープが必要ない場合、リストは空である可能性があります（MAY）。 他のセキュリティスキームタイプの場合、配列には、実行に必要なロール名のリストが含まれる場合がありますが、それ以外の場合はインバンドで定義または交換されません。
+
+#### Security Requirementオブジェクトの例
+##### OAuth2以外のセキュリティ要求
+```json
+{
+  "api_key": []
+}
+```
+```yaml
+api_key: []
+```
+
+##### OAuth2 のセキュリティ要求
+```json
+{
+  "petstore_auth": [
+    "write:pets",
+    "read:pets"
+  ]
+}
+```
+```yaml
+petstore_auth:
+- write:pets
+- read:pets
+```
+
+##### オプションの OAuth2 セキュリティ
+OpenAPIオブジェクトまたはOperationオブジェクトで定義されるオプションの OAuth2 セキュリティ:
+```json
+{
+  "security": [
+    {},
+    {
+      "petstore_auth": [
+        "write:pets",
+        "read:pets"
+      ]
+    }
+  ]
+}
+```
+```yaml
+security:
+  - {}
+  - petstore_auth:
+    - write:pets
+    - read:pets
+```
+
+## 仕様拡張
+OpenAPI 仕様はほとんどのユース ケースに対応しようとしていますが、特定の時点で仕様を拡張するために追加のデータを追加できます。
+
+拡張プロパティは、常に `"x-"` で始まるパターン化されたフィールドとして実装されます。
+
+フィールドのパターン | 型 | 説明
+---|:---:|---
+^x- | Any | OpenAPI スキーマへの拡張を許可します。 フィールド名は `x-` で始まる必要があります（MUST） (例: `x-internal-id`)。`x-oai-` および `x-oas-` で始まるフィールド名は、[OpenAPI Initiative](https://www.openapis.org/) によって定義された使用のために予約されています。 値は、`null`、プリミティブ、配列、またはオブジェクトにすることができます。
+
+拡張機能は、利用可能なツールでサポートされている場合とサポートされていない場合がありますが、要求されたサポートを追加するために拡張することもできます (ツールが内製またはオープンソースの場合)。
+
+## セキュリティフィルタリング
+OpenAPI 仕様の一部のオブジェクトは、本質的に API ドキュメントの中核であるにもかかわらず、宣言されて空のままになるか、完全に削除される場合があります（MAY）。
+
+その理由は、ドキュメントに対するアクセス制御のレイヤーを追加できるようにするためです。
+仕様自体の一部ではありませんが、特定のライブラリは、何らかの形式の認証/承認に基づいて、ドキュメントの一部へのアクセスを許可することを選択できます。
+
+これの 2 つの例:
+
+1. [Pathsオブジェクト](#pathsオブジェクト) は存在しても空である場合があります（MAY）。 直感に反するかもしれませんが、視聴者は適切な場所にたどり着いたものの、ドキュメントにアクセスできないことがわかります。 認証に関する追加情報を含む可能性がある少なくとも [Infoオブジェクト](#infoオブジェクト) には引き続きアクセスできます。
+2. [Path Itemオブジェクト](#path-itemオブジェクト) は空である場合があります（MAY）。 この場合、ビューアーはパスが存在することを認識しますが、その操作やパラメーターを表示することはできません。 これは、[Pathsオブジェクト](#pathsオブジェクト) からパス自体を非表示にすることとは異なります。ユーザーはその存在に気付くからです。 これにより、ドキュメンテーションプロバイダーは、閲覧者が何を表示できるかを細かく制御できます。
+
+## Appendix A: 改訂履歴
+Version   | Date       | Notes
+---       | ---        | ---
+3.1.0     | 2021-02-15 | Release of the OpenAPI Specification 3.1.0 
+3.1.0-rc1 | 2020-10-08 | rc1 of the 3.1 specification
+3.1.0-rc0 | 2020-06-18 | rc0 of the 3.1 specification
+3.0.3     | 2020-02-20 | Patch release of the OpenAPI Specification 3.0.3
+3.0.2     | 2018-10-08 | Patch release of the OpenAPI Specification 3.0.2
+3.0.1     | 2017-12-06 | Patch release of the OpenAPI Specification 3.0.1
+3.0.0     | 2017-07-26 | Release of the OpenAPI Specification 3.0.0
+3.0.0-rc2 | 2017-06-16 | rc2 of the 3.0 specification
+3.0.0-rc1 | 2017-04-27 | rc1 of the 3.0 specification
+3.0.0-rc0 | 2017-02-28 | Implementer's Draft of the 3.0 specification
+2.0       | 2015-12-31 | Donation of Swagger 2.0 to the OpenAPI Initiative
+2.0       | 2014-09-08 | Release of Swagger 2.0
+1.2       | 2014-03-14 | Initial release of the formal document.
+1.1       | 2012-08-22 | Release of Swagger 1.1
+1.0       | 2011-08-10 | First release of the Swagger Specification
