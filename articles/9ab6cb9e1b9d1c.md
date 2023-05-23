@@ -1,5 +1,5 @@
 ---
-title: "GolangでOracle"
+title: "GolangでOracle（その１）"
 emoji: "🐕"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["golang", "sqlx", "sql", "database", "oracle"]
