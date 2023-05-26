@@ -186,6 +186,8 @@ func main() {
 }
 ```
 
+問題ではありませんが、Oracle のカラム名の戻しが upper case なのは、全角文字でも同様みたいなので、StructScan で受けるためには、上記のように CREATE TABLE 文で「Ｒｅｔｓｕ５」あっても、db タグは「ＲＥＴＳＵ５」にしないといけませんでした。
+
 ## sqlx の問題（再掲）
 
 以前の PostgreSQL の評価時に明らかになったのですが、sqlx の [Named Query](http://jmoiron.github.io/sqlx/#namedParams) は、マルチバイト Unicode 対応できていません。
