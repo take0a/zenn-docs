@@ -54,10 +54,32 @@ CREATE TABLE 日ほンｺﾞ表 (
 );
 ```
 
+この CREATE TABLE 文の場合は、sqlplus で実行する前に NLS_LANG の設定が必要になります。Amazon Linux 2 上で動かす場合は、以下のようにします。
+
+```bash
+$ export NLS_LANG=Japanese_Japan.UTF8
+$ sqlplus agra@oracle.■■■■.ap-northeast-1.rds.amazonaws.com/orcl
+
+SQL*Plus: Release 19.0.0.0.0 - Production on 木 5月 25 10:18:47 2023
+Version 19.19.0.0.0
+
+Copyright (c) 1982, 2022, Oracle.  All rights reserved.
+
+パスワードを入力してください: 
+最終正常ログイン時間: 木 5月  25 2023 10:09:56 +00:00
+
+
+Oracle Database 19c Standard Edition 2 Release 19.0.0.0.0 - Production
+Version 19.18.0.0.0
+に接続されました。
+SQL> @testdata/create_table.sql
+```
+
 # Golang
 ## 処理系とライブラリ
 
 前回と同様、Golang は、1.18.6。github.com/sijms/go-ora/v2 は、v2.7.6 を使用します。
+
 今回はタイムスタンプは、検証の対象ではありませんので、ドライバ付属の独自型の問題はありません（気になる方は前回の記事を参照ください）。
 
 ## アプリケーション
@@ -164,11 +186,11 @@ func main() {
 }
 ```
 
-## sqlx の問題（PostgreSQL（その２）の再掲）
+## sqlx の問題（再掲）
 
-今回の評価で明らかになったのですが、sqlx の [Named Query](http://jmoiron.github.io/sqlx/#namedParams) は、マルチバイト Unicode 対応できていません。
+以前の PostgreSQL の評価時に明らかになったのですが、sqlx の [Named Query](http://jmoiron.github.io/sqlx/#namedParams) は、マルチバイト Unicode 対応できていません。
 
-このため、このプログラムを動かすには、sqlx を修正する必要があります。今回の修正は、sqlx には[プルリク](https://github.com/jmoiron/sqlx/pull/865)済みです（が、休眠しているようなので、取り込まれないかもしれません）。
+このため、このプログラムを動かすには、sqlx を修正する必要があります。今回の修正は、sqlx には [プルリク](https://github.com/jmoiron/sqlx/pull/865) 済みです（が、休眠しているようなので、取り込まれないかもしれません）。
 
 この修正を適用して動かすためには、以下のリポジトリを clone して、go.mod で replace する必要があります。
 

@@ -208,11 +208,11 @@ func main() {
 }
 ```
 
-## sqlx の問題（PostgreSQL（その２）の再掲）
+## sqlx の問題（再掲）
 
-今回の評価で明らかになったのですが、sqlx の [Named Query](http://jmoiron.github.io/sqlx/#namedParams) は、マルチバイト Unicode 対応できていません。
+以前の PostgreSQL の評価時に明らかになったのですが、sqlx の [Named Query](http://jmoiron.github.io/sqlx/#namedParams) は、マルチバイト Unicode 対応できていません。
 
-このため、このプログラムを動かすには、sqlx を修正する必要があります。今回の修正は、sqlx には[プルリク](https://github.com/jmoiron/sqlx/pull/865)済みです（が、休眠しているようなので、取り込まれないかもしれません）。
+このため、このプログラムを動かすには、sqlx を修正する必要があります。今回の修正は、sqlx には [プルリク](https://github.com/jmoiron/sqlx/pull/865) 済みです（が、休眠しているようなので、取り込まれないかもしれません）。
 
 この修正を適用して動かすためには、以下のリポジトリを clone して、go.mod で replace する必要があります。
 
