@@ -17,7 +17,7 @@ https://zenn.dev/robon/articles/9c53c6905f2ffb
 # Oracle
 ## データベース
 
-Amazon RDS 上に構築した MySQL サーバーを使用します。
+Amazon RDS 上に構築した Oracle サーバーを使用します。
 
 | 設定 | 値 |
 |---|---|
