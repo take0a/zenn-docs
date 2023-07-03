@@ -3,7 +3,7 @@ title: "GolangでOracle（その２）"
 emoji: "🐕"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["golang", "sqlx", "sql", "日本語", "oracle"]
-published: false
+published: true
 publication_name: "robon"
 ---
 
