@@ -21,7 +21,8 @@ AWSでWordPressを「早く」「安く」「簡単に」運用するには、Li
 ## データベース
 Lightsailのコンソールはかわいらしい感じで良いですね。
 
-左のパネルで「データベース」を選んで「データベースの作成」を行います。高可用性にするのは、後からでもできるので、デフォルトで選ばれているMySQLの新しいバージョンのまま、一番安いプランのまま、一番下の「データベースの作成」ボタンを押します。作成中になるので数分間（ちょっと長め）見守ります。ボタンを２回押すだけなので誰でもできます。
+左のパネルで「データベース」を選んで「データベースの作成」を行います。
+高可用性にするのは、後からでもできるので、デフォルトで選ばれているMySQLの新しいバージョンのまま、一番安いプランのまま、一番下の「データベースの作成」ボタンを押します。作成中になるので数分間（ちょっと長め）見守ります。ボタンを２回押すだけなので誰でもできます。
 
 利用可能になったら、リソース名（本当に何もしていなければDatabase-1）を選んで、「接続」タブの設定を確認しておきます。以下の項目は後ほど使用しますが、いつでも確認できますので、メモらなくても大丈夫です。
 - ユーザー名
@@ -35,7 +36,9 @@ Lightsailのコンソールはかわいらしい感じで良いですね。
 データベースをインストールするという仕事は不要な時代なのでしょうね。
 
 ## インスタンス
-次はWordPressです。左のパネルで「インスタンス」を選んで「インスタンスの作成」を行います。デフォルトで選ばれているLinuxのWordPressのまま、プランだけ$5から一番安い$3.5に変更します。以下のように警告されますが、無視して、一番下の「インスタンスの作成」ボタンを押します。こちらは数秒で終わります。
+次はWordPressです。
+左のパネルで「インスタンス」を選んで「インスタンスの作成」を行います。
+デフォルトで選ばれているLinuxのWordPressのまま、プランだけ$5から一番安い$3.5に変更します。以下のように警告されますが、無視して、一番下の「インスタンスの作成」ボタンを押します。こちらは数秒で終わります。
 > より大きなインスタンスプランをご検討ください
 > 選択したプランでは、アプリケーションの速度が遅くなったり、アプリケーションが応答しなくなったりするなど、パフォーマンスの問題が発生する場合があります。$5 USD (1 GB RAM) インスタンスプラン以上を選択することをご検討ください
 
@@ -137,32 +140,39 @@ bitnami@ip-172-26-9-97:~$
 ### WP Offload Media Lite
 ブラウザで`WordPress-1`のPublicなIPアドレスへ接続して設定を行います。`http://xxx.xxx.xxx.xxx/wp-login.php`でユーザーは`user`パスワードは、上の`bitnami_application_password`ファイルの中身になります。
 
-`Dashboard`に接続できたら、表示を日本語に変更します。左のパネルで「Settings」の「General」を選びます。「Site Language」を`日本語`に変更して、一番したの「Save Changes」ボタンを押します。（機能的にはどうってことはないのですが、ホームグラウンドの安心感は大事です）
+`Dashboard`に接続できたら、表示を日本語に変更します。
+左のパネルで「Settings」の「General」を選びます。「Site Language」を`日本語`に変更して、一番したの「Save Changes」ボタンを押します。（機能的にはどうってことはないのですが、ホームグラウンドの安心感は大事です）
 
-左のパネルで「プラグイン」の「新規プラグインの追加」を選びます。右上の検索フィールドに`WP Offload Media Lite`と入力して探します。（検索は日本語にすると精度が落ちるような気もします）以下の長い名前の「今すぐインストール」ボタンを押します。ボタンが「有効化」に変わったら「有効化」ボタンも押します。
+左のパネルで「プラグイン」の「新規プラグインの追加」を選びます。
+右上の検索フィールドに`WP Offload Media Lite`と入力して探します。（検索は日本語にすると精度が落ちるような気もします）以下の長い名前の「今すぐインストール」ボタンを押します。ボタンが「有効化」に変わったら「有効化」ボタンも押します。
 > Amazon S3、DigitalOcean Spaces、Google Cloud Storage 用の WP Offload Media Lite
 
-左のパネルで「設定」の「WP Offload Media」を選びます。「Storage Provider」は`wp-config.php`が反映されているので「Bucket」から設定します。「1. New or Existing Bucket?」は`Use Existing Bucket`のまま、「2. Select Bucket」は`Browse existing buckets`を選ぶと前回作成したBucketが表示されるので「Save Selected Bucket」ボタンを押します。次の「Security」では警告が表示されますが、CloudFrontを使う場合は無視できますので「Keep Bucket Security As Is」ボタンを押します。
+左のパネルで「設定」の「WP Offload Media」を選びます。
+「Storage Provider」は`wp-config.php`が反映されているので「Bucket」から設定します。「1. New or Existing Bucket?」は`Use Existing Bucket`のまま、「2. Select Bucket」は`Browse existing buckets`を選ぶと前回作成したBucketが表示されるので「Save Selected Bucket」ボタンを押します。次の「Security」では警告が表示されますが、CloudFrontを使う場合は無視できますので「Keep Bucket Security As Is」ボタンを押します。
 
 ページが変わって「Storage Settings」は、下のURLを見ながら設定ください。（そのままでも良いです）「Delivery Settings」タブへ移動します。一番上の`S3`を`CloudFront`に変更するので「Edit」ボタンを押します。「1. Select Delivery Provide」で`CloudFront`を選択して「Save Delivery Provider」ボタンを押します。前回、代替ドメイン名と証明書まで設定した方は「Use Custom Domain Name (CNAME)」と「Force HTTPS」を指定できます。変更したら「Save Changes」ボタンを押します。
 
 ### WP Mail SMTP
 前回の記事でSESの設定が終わっている方はメール送信と管理者ユーザーのメールアドレスの変更を行うことができます。
 
-左のパネルで「プラグイン」の「インストール済みプラグイン」を選びます。「WP Mail SMTP」を「有効化」します。「WP Mail SMTP セットアップウィザード」に入りますので「始めましょう」ボタンを押してください。
+左のパネルで「プラグイン」の「インストール済みプラグイン」を選びます。
+「WP Mail SMTP」を「有効化」します。「WP Mail SMTP セットアップウィザード」に入りますので「始めましょう」ボタンを押してください。
 
-「SMTP メーラーを選択する」は「その他のSMTP」を選びます。「メーラー設定を調整する」は、前回のSESの「SMTP設定」の値を設定してください。その後は「スキップ」してOKです。
+「SMTP メーラーを選択する」は「その他のSMTP」を選びます。
+「メーラー設定を調整する」は、前回のSESの「SMTP設定」の値を設定してください。その後は「スキップ」してOKです。
 
-左のパネルで「設定」の「一般」を選びます。「管理者メールアドレス」を変更することができます。変更するとメールが送信されますので、メール本文中のリンクをクリックして完了します。左のパネルで「ユーザー」の「プロフィール」を選びます。同様に「メール」を変更することができます。
+左のパネルで「設定」の「一般」を選びます。
+「管理者メールアドレス」を変更することができます。変更するとメールが送信されますので、メール本文中のリンクをクリックして完了します。
+左のパネルで「ユーザー」の「プロフィール」を選びます。
+同様に「メール」を変更することができます。
 
 ### MySQLの後始末
-LightsailのDatabase-1を用意したので、WordPress-1上のMySQLは不要です。WordPress-1は最小で構成したのでWordPress-1上のMySQLは停止しましょう。
-また、LightsailのDatabase-1は「パブリックモード」を「無効」にしたので、Database-1に接続するためにもWordPress-1を「安全な」踏み台にする必要があります。
+LightsailのDatabase-1を用意したので、WordPress-1上のMySQLは不要です。WordPress-1は最小で構成したのでWordPress-1上のMySQLは停止しましょう。また、LightsailのDatabase-1は「パブリックモード」を「無効」にしたので、Database-1に接続するためにもWordPress-1を「安全な」踏み台にする必要があります。
 
-まずは、踏み台から。WordPress-1には、[phpMyAdmin](https://www.phpmyadmin.net/)が入っていますが、publicなIPアドレスから接続すると、以下のメッセージが表示されます。これはセキュリティ上正しいのでpublicなIPアドレスから接続できるように「努力」してはいけません。
+まずは、踏み台から。WordPress-1には、[phpMyAdmin](https://www.phpmyadmin.net/)が入っていますが、publicなIPアドレスから接続すると、以下のメッセージが表示されます。これはセキュリティ的に正しいのでpublicなIPアドレスから接続できるように「努力」してはいけません。
 > For security reasons, this URL is only accessible using localhost (127.0.0.1) as the hostname.
 
-ということで、WordPress-1から`http://localhost/phpmyadmin/`する必要があります。VSCode Remote Developmentをセットアップした人は、80番ポートを転送設定するだけで、VSCodeを実行しているコンピュータから`http://localhost/phpmyadmin/`できます。ユーザーIDとパスワードは、wp-config.php.orgに設定してあったもので接続できます。
+ということで、WordPress-1内から`http://localhost/phpmyadmin/`する必要があります。VSCode Remote Developmentをセットアップした人は、80番ポートを転送設定するだけで、VSCodeを実行しているコンピュータから`http://localhost/phpmyadmin/`できます。ユーザーIDとパスワードは、wp-config.php.orgに設定してあったローカル用のもので接続できます。
 
 phpMyAdminでもいいかなと思ったのですが、最終的には、VSCodeの[MySQL](https://marketplace.visualstudio.com/items?itemName=formulahendry.vscode-mysql)拡張にしました。新旧のMySQLの比較も簡単そうだったのとWordPress-1上へのフットプリントが小さいことから「こういうのでいいんだよ」ということにしました。
 
