@@ -155,6 +155,109 @@ bitnami@ip-172-26-9-97:~$
 
 左のパネルで「設定」の「一般」を選びます。「管理者メールアドレス」を変更することができます。変更するとメールが送信されますので、メール本文中のリンクをクリックして完了します。左のパネルで「ユーザー」の「プロフィール」を選びます。同様に「メール」を変更することができます。
 
+### MySQLの後始末
+LightsailのDatabase-1を用意したので、WordPress-1上のMySQLは不要です。WordPress-1は最小で構成したのでWordPress-1上のMySQLは停止しましょう。
+また、LightsailのDatabase-1は「パブリックモード」を「無効」にしたので、Database-1に接続するためにもWordPress-1を「安全な」踏み台にする必要があります。
+
+まずは、踏み台から。WordPress-1には、[phpMyAdmin](https://www.phpmyadmin.net/)が入っていますが、publicなIPアドレスから接続すると、以下のメッセージが表示されます。これはセキュリティ上正しいのでpublicなIPアドレスから接続できるように「努力」してはいけません。
+> For security reasons, this URL is only accessible using localhost (127.0.0.1) as the hostname.
+
+ということで、WordPress-1から`http://localhost/phpmyadmin/`する必要があります。VSCode Remote Developmentをセットアップした人は、80番ポートを転送設定するだけで、VSCodeを実行しているコンピュータから`http://localhost/phpmyadmin/`できます。ユーザーIDとパスワードは、wp-config.php.orgに設定してあったもので接続できます。
+
+phpMyAdminでもいいかなと思ったのですが、最終的には、VSCodeの[MySQL](https://marketplace.visualstudio.com/items?itemName=formulahendry.vscode-mysql)拡張にしました。新旧のMySQLの比較も簡単そうだったのとWordPress-1上へのフットプリントが小さいことから「こういうのでいいんだよ」ということにしました。
+
+MySQLの切り替えがうまくいっていることが確認できたら、WordPress-1上のMySQL（途中から気づいていましたが現在はMariaDBですね）を停止します。
+
+```bash
+bitnami@ip-172-26-9-97:~$ sudo /opt/bitnami/ctlscript.sh status
+apache already running
+mariadb already running
+php-fpm already running
+bitnami@ip-172-26-9-97:~$ sudo /opt/bitnami/ctlscript.sh stop mariadb
+Stopped mariadb
+bitnami@ip-172-26-9-97:~$ sudo /opt/bitnami/ctlscript.sh status
+apache already running
+mariadb not running
+php-fpm already running
+```
+
+この`/opt/bitnami/ctlscript.sh`の中身を見ると、[gonit](https://github.com/bitnami/gonit)という[monit](https://mmonit.com/monit/)クローンで管理しているようです。この設定を書き換えて再起動しないようにします。
+
+```bash
+bitnami@ip-172-26-9-97:~$ cd /etc/monit/conf.d/
+bitnami@ip-172-26-9-97:/etc/monit/conf.d$ ls -l
+total 16
+-rw-r--r-- 1 root root 300 Dec 12 11:36 apache.conf
+-rw-r--r-- 1 root root 301 Dec 12 11:36 mariadb.conf
+-rw-r--r-- 1 root root 294 Dec 12 11:36 php-fpm.conf
+-rw-r--r-- 1 root root 311 Dec 12 11:36 varnish.conf.disabled
+bitnami@ip-172-26-9-97:/etc/monit/conf.d$ sudo mv mariadb.conf mariadb.conf.disabled
+bitnami@ip-172-26-9-97:/etc/monit/conf.d$ ls -l
+total 16
+-rw-r--r-- 1 root root 300 Dec 12 11:36 apache.conf
+-rw-r--r-- 1 root root 301 Dec 12 11:36 mariadb.conf.disabled
+-rw-r--r-- 1 root root 294 Dec 12 11:36 php-fpm.conf
+-rw-r--r-- 1 root root 311 Dec 12 11:36 varnish.conf.disabled
+bitnami@ip-172-26-9-97:/etc/monit/conf.d$ sudo gonit reload
+```
+
+これで良いはずだったのですが…。念のため確認すると「マジか…」
+
+```bash
+bitnami@ip-172-26-9-97:/etc/monit/conf.d$ ps -ef | grep maria
+bitnami    26606   18188  0 01:50 pts/0    00:00:00 grep maria
+bitnami@ip-172-26-9-97:/etc/monit/conf.d$ sudo /opt/bitnami/ctlscript.sh restart
+Restarting services..
+bitnami@ip-172-26-9-97:/etc/monit/conf.d$ ps -ef | grep maria
+mysql      26894       1  0 01:51 ?        00:00:00 /opt/bitnami/mariadb/sbin/mysqld --defaults-file=/opt/bitnami/mariadb/conf/my.cnf --basedir=/opt/bitnami/mariadb --datadir=/bitnami/mariadb/data --socket=/opt/bitnami/mariadb/tmp/mysql.sock --pid-file=/opt/bitnami/mariadb/tmp/mysqld.pid
+bitnami    27437   18188  0 01:51 pts/0    00:00:00 grep maria
+bitnami@ip-172-26-9-97:/etc/monit/conf.d$ sudo /opt/bitnami/ctlscript.sh status
+apache already running
+php-fpm already running
+```
+
+[ここ](https://nedo.im/blog/2023/12/02/how-to-permanently-disable-the-mariadb-service-in-bitnami)の方法でトドメを刺します。（最初の行でcpしたファイルはVSCode上で先のページのように編集しています）
+
+```bash
+bitnami@ip-172-26-9-97:~$ sudo cp /root/.provisioner/stackconfig.json .
+bitnami@ip-172-26-9-97:~$ sudo su - root
+root@ip-172-26-9-97:~# cd .provisioner/
+root@ip-172-26-9-97:~/.provisioner# ls -l
+total 508
+-rw-r--r-- 1 root root    287 Jan  8 02:11 configuration.json
+-rw-r--r-- 1 root root     64 Jan  8 02:11 platform.json
+-rw-r--r-- 1 root root    110 Jan  8 02:11 reciperunner.json
+-rw-r--r-- 1 root root 507087 Dec 12 11:22 stackconfig.json
+root@ip-172-26-9-97:~/.provisioner# mv stackconfig.json stackconfig.json.org
+root@ip-172-26-9-97:~/.provisioner# cp /home/bitnami/stackconfig.json .
+root@ip-172-26-9-97:~/.provisioner# ls -l
+total 920
+-rw-r--r-- 1 root root    287 Jan  8 02:11 configuration.json
+-rw-r--r-- 1 root root     64 Jan  8 02:11 platform.json
+-rw-r--r-- 1 root root    110 Jan  8 02:11 reciperunner.json
+-rw-r--r-- 1 root root 420233 Jan  8 02:35 stackconfig.json
+-rw-r--r-- 1 root root 507087 Dec 12 11:22 stackconfig.json.org
+```
+
+念のため、再起動後に検死しておきます。
+
+```bash
+bitnami@ip-172-26-9-97:~$ ps -ef | grep maria
+bitnami     1378    1338  0 02:40 pts/0    00:00:00 grep maria
+bitnami@ip-172-26-9-97:~$ sudo /opt/bitnami/ctlscript.sh status
+apache already running
+php-fpm already running
+bitnami@ip-172-26-9-97:~$ sudo /opt/bitnami/ctlscript.sh restart
+Restarting services..
+bitnami@ip-172-26-9-97:~$ sudo /opt/bitnami/ctlscript.sh status
+apache already running
+php-fpm already running
+bitnami@ip-172-26-9-97:~$ ps -ef | grep maria
+bitnami     2265    1338  0 02:41 pts/0    00:00:00 grep maria
+```
+
+これは普通の人にはできないわ…
+
 ## ロードバランサー
 WordPress-1 が完成したので、スナップショットを作成します。
 
