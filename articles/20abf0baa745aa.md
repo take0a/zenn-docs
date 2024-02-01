@@ -3,7 +3,7 @@ title: "Lightsailでサイトを作る（その２）"
 emoji: "⛵"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["lightsail", "wordpress", "mysql", "loadbalancer", "s3"]
-published: false
+published: true
 publication_name: "robon"
 ---
 
@@ -288,4 +288,4 @@ Lightsailの管理コンソールの「Loadbalancer-1」の「カスタムドメ
 検証が終わると「ネットワーキング」タブの「プロトコル」の「HTTPS」も「有効」になります。必要に応じて「HTTP から HTTPS へのリダイレクトは非アクティブです」を「HTTP から HTTPS へのリダイレクトはアクティブです」に切り替えます。
 
 # おわりに
-こちらのマーケティングサイトをこれから運用して参ります。
+こちらの[マーケティングサイト](https://cms1.robon.co.jp/sodan/zeimu)をこれから運用して参ります。
