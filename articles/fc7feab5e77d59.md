@@ -212,5 +212,24 @@ https://github.com/envoyproxy/examples/blob/main/tls/envoy-https-passthrough.yam
 
 # おわりに
 
+以下のように後片付けしておきましょう。
+
+```bash
+$ docker-compose down
+Stopping tls_proxy-https-passthrough_1 ... done
+Stopping tls_service-https_1           ... done
+Stopping tls_proxy-https-to-https_1    ... done
+Stopping tls_service-http_1            ... done
+Stopping tls_proxy-https-to-http_1     ... done
+Stopping tls_proxy-http-to-https_1     ... done
+Removing tls_proxy-https-passthrough_1 ... done
+Removing tls_service-https_1           ... done
+Removing tls_proxy-https-to-https_1    ... done
+Removing tls_service-http_1            ... done
+Removing tls_proxy-https-to-http_1     ... done
+Removing tls_proxy-http-to-https_1     ... done
+Removing network tls_default
+```
+
 まぁ、よく使いそうなのは、Step 2 ですが、この Sandbox の内容を押さえておけば、TLS は大丈夫そうですね。
- 
+それでは、第２回で。
