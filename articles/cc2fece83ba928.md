@@ -66,7 +66,7 @@ https://github.com/envoyproxy/examples/blob/main/lua/docker-compose.yaml
 
 https://github.com/envoyproxy/examples/blob/main/shared/envoy/Dockerfile#L77-L78
 
-`lib/mylibrary.lua` を取り込んでます。これも中身を見ておくと
+`./lib/mylibrary.lua` を取り込んでます。これも中身を見ておくと
 
 https://github.com/envoyproxy/examples/blob/main/lua/lib/mylibrary.lua
 
@@ -157,4 +157,5 @@ https://github.com/envoyproxy/examples/blob/main/lua/envoy.yaml#L21-L33
 # おわりに
 
 今回、Lua を取り上げたのは、Auth0 で RBAC（Role-Based Access Control）を設定して、JWT に反映された内容に応じた認可を Envoy で実現したかったためです。
-ですから、たぶん、第５回もあります。
+
+ですから、たぶん、第５回もありますね。きっと。
