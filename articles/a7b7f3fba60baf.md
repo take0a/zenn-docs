@@ -133,6 +133,39 @@ NUXT_OAUTH_GOOGLE_CLIENT_ID=■■■■■■■■■■■■■■■■■�
 NUXT_OAUTH_GOOGLE_CLIENT_SECRET=GO■■-■■■■■■■■■■■■■■■■■■■■-■■■
 ```
 
+これで、`http://localhost:3000/customer/new` へ行くと、認証が動きます。
+
 ![](/images/a7b7f3fba60baf/login.png)
 
+おしまい。と言いたいところですが、認証を突破すると `http://localhost:3000/` に飛ばされます。これは、上でパクッてきた `google.get.ts` の最後が `return sendRedirect(event, '/')` なってるからなので、以下のように修正して、割り込まれた際の行先にしておきます。
+
+```diff ts:middleware/auth.ts
+@@ -1,7 +1,9 @@
+ export default defineNuxtRouteMiddleware(
+-  async (_to, _from) => {
++  async (to, _from) => {
+     const { loggedIn } = useUserSession()
+     if (!loggedIn.value) {
++      const cookie = useCookie<string | null>('REDIRECT_COOKIE_NAME')
++      cookie.value = to.fullPath
+       return navigateTo('/auth/google', { external: true })
+     }
+   },
+```
+
+```diff ts:server/routes/auth/google.get.ts
+@@ -12,6 +12,8 @@ export default defineOAuthGoogleEventHandler({
+       loggedInAt: Date.now(),
+     })
+ 
+-    return sendRedirect(event, '/')
++    const to = getCookie(event, 'REDIRECT_COOKIE_NAME') || '/'
++    deleteCookie(event, 'REDIRECT_COOKIE_NAME')
++    return sendRedirect(event, to)
+   },
+ })
+```
+
 # おわりに
+いかがでしたでしょうか。わかっていれば作るのは簡単ですよね。
+次回は、他のプロバイダーも紹介するかもしれません。
