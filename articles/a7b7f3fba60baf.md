@@ -3,7 +3,7 @@ title: "いまさらNuxt3（その３）"
 emoji: "⛰"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["nuxt3", "vue", "vuetify", "auth", "googlecloud"]
-published: false
+published: true
 publication_name: "robon"
 ---
 
