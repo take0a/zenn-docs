@@ -4,14 +4,14 @@ emoji: "🏎"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["fastapi", "rest", "postgresql", "python", "sqlalchemy"]
 published: true
-publication_name: "robon"
+publication_name: "psc"
 ---
 
 # はじめに
 
 当社では、クラウドネイティブなSaaSの開発をしており、いつもはWebAPIの実装ならサーバーレスで。となるのですが、今回は、サーバーレスでないWebAPIの実現方法として、NestJSに続き、FastAPIを動かしてみましたという内容です。
 
-https://zenn.dev/robon/articles/76d4ec767b72ae
+https://zenn.dev/psc/articles/76d4ec767b72ae
 
 上記のNestJSの記事と同じお題を実装してみます。
 
@@ -143,5 +143,5 @@ INFO:     Application startup complete.
 
 データベースにアクセスするREST Serverを実装していきます。
 
-https://zenn.dev/robon/articles/bb17fd07739519
+https://zenn.dev/psc/articles/bb17fd07739519
 

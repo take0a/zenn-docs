@@ -4,14 +4,14 @@ emoji: "🛡️"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["envoy", "docker", "lua", "webapi", "security"]
 published: true
-publication_name: "robon"
+publication_name: "psc"
 ---
 
 # はじめに
 
 マイクロサービスやWeb API界隈では、サービス間のネットワークの制御をライブラリではなく、プロキシのコンテナをサイドカーとして使うのだとか。そのデファクトスタンダード的な立ち位置なのが Envoy さん。
 
-[（その３）](https://zenn.dev/robon/articles/08af35f4a3672b)では、Envoy さんの Sandbox ではなく、[Auth0](https://auth0.com/jp) を使用した JWT 認証にチャレンジしましたが、今回は、[（その１）](https://zenn.dev/robon/articles/fc7feab5e77d59)や[（その２）](https://zenn.dev/robon/articles/2896faa9bbe72d)と同様、Envoy さんの Sandbox へ戻ります。
+[（その３）](https://zenn.dev/psc/articles/08af35f4a3672b)では、Envoy さんの Sandbox ではなく、[Auth0](https://auth0.com/jp) を使用した JWT 認証にチャレンジしましたが、今回は、[（その１）](https://zenn.dev/psc/articles/fc7feab5e77d59)や[（その２）](https://zenn.dev/psc/articles/2896faa9bbe72d)と同様、Envoy さんの Sandbox へ戻ります。
 
 # やってみた
 ## Lua って
@@ -30,7 +30,7 @@ https://www.lua.org/
 
 ## 環境構築
 
-今回も省略します。必要な方は、[（その１）](https://zenn.dev/robon/articles/fc7feab5e77d59) をご覧ください。
+今回も省略します。必要な方は、[（その１）](https://zenn.dev/psc/articles/fc7feab5e77d59) をご覧ください。
 
 ## Lua filter
 

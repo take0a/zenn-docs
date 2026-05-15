@@ -4,22 +4,22 @@ emoji: "✌"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["golang", "sqlx", "sql", "database", "db2"]
 published: true
-publication_name: "robon"
+publication_name: "psc"
 ---
 # はじめに
 
 前回は、Db2 for Docker を動かしてみました。
 
-https://zenn.dev/robon/articles/155b2d716bfc63
+https://zenn.dev/psc/articles/155b2d716bfc63
 
 そもそも、目的だった Golang からのアクセスを検証します。
 
 これまで、各種データベースの評価をしてきましたので、Db2以外のデータベースが気になる方は、以下を参照ください。
 
-https://zenn.dev/robon/articles/9a005b45213167
-https://zenn.dev/robon/articles/9ab6cb9e1b9d1c
-https://zenn.dev/robon/articles/9c53c6905f2ffb
-https://zenn.dev/robon/articles/9d6ba760a74b89
+https://zenn.dev/psc/articles/9a005b45213167
+https://zenn.dev/psc/articles/9ab6cb9e1b9d1c
+https://zenn.dev/psc/articles/9c53c6905f2ffb
+https://zenn.dev/psc/articles/9d6ba760a74b89
 
 # Db2
 ## データベース
@@ -37,7 +37,7 @@ https://zenn.dev/robon/articles/9d6ba760a74b89
 
 ### ツールとドライバー
 
-これまでは、Pure Go でしたが、今回のライブラリは、ODBC ドライバーの共有ライブラリを必要とするため、IBM Data Server Driver for ODBC and CLI を使用します。インストール方法は[前回の記事](https://zenn.dev/robon/articles/155b2d716bfc63)を参照ください。
+これまでは、Pure Go でしたが、今回のライブラリは、ODBC ドライバーの共有ライブラリを必要とするため、IBM Data Server Driver for ODBC and CLI を使用します。インストール方法は[前回の記事](https://zenn.dev/psc/articles/155b2d716bfc63)を参照ください。
 
 ## テスト用のテーブル
 ### データ型の一覧

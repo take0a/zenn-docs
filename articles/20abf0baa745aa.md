@@ -4,13 +4,13 @@ emoji: "⛵"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["lightsail", "wordpress", "mysql", "loadbalancer", "s3"]
 published: true
-publication_name: "robon"
+publication_name: "psc"
 ---
 
 # はじめに
 クラウドソーシングを活用してマーケティングサイトを作ることになりました。
 
-https://zenn.dev/robon/articles/cceae938662f75
+https://zenn.dev/psc/articles/cceae938662f75
 
 前回は、ここまで準備したので、いよいよ主役のLightsailです。
 

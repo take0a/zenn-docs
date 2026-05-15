@@ -4,13 +4,13 @@ emoji: "🐕"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["golang", "sqlx", "sql", "database", "oracle"]
 published: true
-publication_name: "robon"
+publication_name: "psc"
 ---
 # はじめに
 
 前回は、Golang で MySQL/MariaDB の各種データ型の入出力を検証しました。
 
-https://zenn.dev/robon/articles/9c53c6905f2ffb
+https://zenn.dev/psc/articles/9c53c6905f2ffb
 
 今回は、Oracle を評価します。
 

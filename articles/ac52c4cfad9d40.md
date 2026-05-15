@@ -4,14 +4,14 @@ emoji: "🐕"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["golang", "sqlx", "sql", "日本語", "oracle"]
 published: true
-publication_name: "robon"
+publication_name: "psc"
 ---
 
 # はじめに
 
 先日、Golang で Oracle の各種データ型を扱った場合の評価を行いました。
 
-https://zenn.dev/robon/articles/9ab6cb9e1b9d1c
+https://zenn.dev/psc/articles/9ab6cb9e1b9d1c
 
 今回は、日本語の識別子、データを扱った場合の評価を行います。
 
